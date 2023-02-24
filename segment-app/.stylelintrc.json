@@ -1,0 +1,39 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-prettier",
+    "stylelint-config-idiomatic-order"
+  ],
+  "plugins": ["stylelint-order", "stylelint-scss"],
+  "rules": {
+    "font-family-no-missing-generic-family-keyword": null,
+    "no-missing-end-of-source-newline": true,
+    "import-notation": null,
+    "at-rule-no-unknown": null,
+		"scss/at-rule-no-unknown": null,
+    "selector-class-pattern": [
+      "^([a-zA-Z]+)+(__[a-zA-Z]+)?(_[a-zA-Z]+)?(_[a-zA-Z]+)?$",
+      {
+        "message": "not correct class pattern"
+      }
+    ],
+    "selector-id-pattern": [
+      "^([a-zA-Z]+)+(__[a-zA-Z]+)?(_[a-zA-Z]+)?(_[a-zA-Z]+)?$",
+      {
+        "message": "not correct id pattern"
+      }
+    ],
+    "keyframes-name-pattern": [
+      "^([a-zA-Z]+)+(__[a-zA-Z]+)?(_[a-zA-Z]+)?(_[a-zA-Z]+)?$",
+      {
+        "message": "not correct name pattern"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.scss"],
+      "customSyntax": "postcss-scss"
+    }
+  ]
+}

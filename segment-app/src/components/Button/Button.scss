@@ -1,0 +1,36 @@
+.button {
+  @apply inline-flex justify-center items-center;
+  @apply px-4 py-2;
+  @apply font-medium;
+  @apply border-none outline-none rounded-lg;
+  @apply transition;
+
+  cursor: pointer;
+
+  &.button_primary {
+    @apply bg-primary-500 text-light-50;
+  }
+
+  &.button_secondary {
+    @apply bg-secondary-600 text-light-50;
+  }
+
+  &.button_monochrome {
+    @apply bg-light-900 text-light-50;
+    @apply dark:bg-dark-50 dark:text-dark-900
+  }
+
+  &:hover {
+    @apply bg-opacity-90;
+  }
+
+  &:active {
+    @apply bg-opacity-80;
+  }
+
+  &:disabled {
+    @apply bg-light-600 dark:bg-dark-400;
+    
+    pointer-events: none;
+  }
+}

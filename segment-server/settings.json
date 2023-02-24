@@ -1,0 +1,11 @@
+{
+  "server": {
+    "hostname": "segment.chat",
+    "ip": "localhost",
+    "port": 8080,
+    "keySize": 2048
+  },
+  "auth": {
+    "allowRegistration": true
+  }
+}

@@ -1,0 +1,54 @@
+.page__auth {
+  @apply p-0;
+
+  overflow: hidden;
+
+  .page__wrapper {
+    @apply flex flex-row flex-1 justify-between items-center gap-4;
+    @apply p-0 w-full;
+
+    max-width: 1200px;
+  }
+
+  .page__content {
+    @apply flex flex-col justify-center gap-8;
+    @apply p-12 box-border;
+
+    max-width: 530px;
+  }
+
+  .page__banner {
+    @apply block;
+    @apply rounded-3xl;
+
+    width: 50%;
+    height: 600px;
+    // offset using border radius
+    margin-right: -24px;
+    background-position: center;
+    background-size: cover;
+  }
+
+  .auth {
+    &__container {
+      @apply flex flex-col flex-1 gap-4 w-full;
+    }
+
+    &__footer {
+      @apply flex flex-row gap-2 mt-auto;
+    }
+
+    &__logo {
+      @apply flex;
+
+      position: relative;
+      max-height: 50px;
+    }
+
+    &__page {
+      .button_primary {
+        width: 100%;
+      }
+    }
+  }
+}

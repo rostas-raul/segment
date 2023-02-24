@@ -1,0 +1,51 @@
+@import '@/assets/styles/text';
+@import '@/assets/styles/layout';
+@import '@/assets/styles/appearance';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-light-50 dark:bg-dark-900;
+  @apply text-light-900 dark:text-light-50;
+  @apply m-0 p-0;
+
+  // Disable blue box on mobile devices
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Tailwind preflight
+@layer base {
+  h1 {
+    @apply text-3xl;
+    @apply font-medium;
+  }
+
+  h2 {
+    @apply text-xl;
+    @apply font-medium;
+  }
+
+  h3 {
+    @apply text-lg;
+    @apply font-medium;
+  }
+
+  h4 {
+    @apply text-base;
+  }
+
+  h5 {
+    @apply text-sm;
+  }
+
+  h6 {
+    @apply text-xs;
+  }
+
+  p {
+    @apply text-base;
+    @apply text-light-800 dark:text-dark-300;
+  }
+}

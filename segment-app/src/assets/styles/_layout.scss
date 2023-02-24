@@ -1,0 +1,33 @@
+body {
+  display: flex;
+  min-height: 100vh;
+  flex: 1;
+  flex-direction: column;
+}
+
+#root, main.App {
+  display: flex;
+  box-sizing: border-box;
+  flex: 1;
+  flex-direction: column;
+}
+
+body,
+#root,
+main.App {
+  // Elements that need scrolling will specify it themselves
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+
+  .page__content {
+    width: 100%;
+    max-width: 1200px;
+  }
+}

@@ -1,0 +1,83 @@
+.input {
+  @apply flex flex-col gap-2;
+
+  &__label {
+    @apply text-sm text-light-800 dark:text-dark-300;
+    @apply uppercase;
+  }
+
+  .input__element {
+    &.input_text {
+      @apply bg-transparent border-2 outline-none border-light-200 dark:border-dark-700;
+      @apply text-sm text-light-900 dark:text-dark-50;
+      @apply px-4 py-2;
+      @apply rounded-lg;
+      @apply transition;
+      // give enough space for the ring
+      @apply mb-2;
+
+      &:focus {
+        @apply border-primary-500;
+        @apply ring-2 ring-offset-2;
+        @apply ring-primary-500/75 dark:ring-primary-500/25;
+        @apply ring-offset-light-50 dark:ring-offset-dark-900;
+      }
+
+      &::placeholder {
+        @apply text-light-400 dark:text-dark-500;
+      }
+    }
+
+    &.input_inline {
+      @apply bg-transparent border-2 outline-none border-light-200 dark:border-dark-700;
+      @apply text-sm text-light-900 dark:text-dark-50;
+      @apply p-1;
+      @apply rounded-lg;
+      @apply transition;
+
+      height: 25px;
+      box-sizing: border-box;
+
+      &:focus {
+        @apply border-primary-500;
+      }
+
+      &::placeholder {
+        @apply text-light-400 dark:text-dark-500;
+      }
+    }
+  }
+
+  &[type='inline'] {
+    display: inline;
+    max-width: 100%;
+
+    .inline__wrapper {
+      position: relative;
+
+      .inline__input {
+        @apply flex flex-row gap-1 items-center;
+
+        .button {
+          @apply border-2 border-secondary-600;
+
+          height: 25px;
+          font-size: 13px;
+        }
+      }
+
+      .inline__component {
+        @apply flex gap-2 items-center;
+
+        max-width: 100%;
+        cursor: pointer;
+        white-space: normal;
+        word-break: break-all;
+
+        .icon {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+}

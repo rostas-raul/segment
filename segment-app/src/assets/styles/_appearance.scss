@@ -1,0 +1,9 @@
+a:not(.default_style) {
+  @apply text-primary-500 font-medium;
+
+  &:hover {
+    @apply underline-offset-2;
+
+    text-decoration: underline;
+  }
+}
