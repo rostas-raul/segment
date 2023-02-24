@@ -9,6 +9,8 @@ A segment egy decentralizált kommunikációs platform, amely más hasonló plat
 
 A projekt egyszerűbb módját választja a kommunikáció kezelésének azáltal, hogy nem bonyolítja túl a funkciókat, és inkább a kommunikálni kívánó emberek bizalmára támaszkodik.
 
+**[Videó Bemutató](https://github.com/rostas-raul/segment/raw/main/.github/video.mp4)**
+
 ## Használat
 
 ### Felhasználói Szerver
