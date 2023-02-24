@@ -5,7 +5,7 @@
 > Egyes funkciók nem működhetnek vagy nincsenek megcsinálva.  
 
 # segment
-A segment egy decentralizált kommunikációs platform, amely más hasonló platformokhoz képest könnyű és gyorsabb.
+A segment egy decentralizált kommunikációs platform, amely más hasonló platformokhoz képest könnyebb és gyorsabb.
 
 A projekt egyszerűbb módját választja a kommunikáció kezelésének azáltal, hogy nem bonyolítja túl a funkciókat, és inkább a kommunikálni kívánó emberek bizalmára támaszkodik.
 
