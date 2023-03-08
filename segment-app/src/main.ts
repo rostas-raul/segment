@@ -16,6 +16,7 @@ import ChatRoom from './routes/Chat/ChatRoom.vue';
 import en from './i18n/en';
 import hu from './i18n/hu';
 import { useAuthStore } from './store/store';
+import ChatRoomCreateVue from './routes/Chat/ChatRoomCreate.vue';
 
 // Meta things
 export const DOCUMENT_TITLE = 'segment';
@@ -29,6 +30,7 @@ export enum Routes {
   AuthRegister = '/auth/register',
 
   Chat = '/chat',
+  ChatroomCreate = '/chat/create',
 }
 
 const routes: Array<RouteRecordRaw> = [
@@ -56,6 +58,10 @@ const routes: Array<RouteRecordRaw> = [
         path: ':roomId',
         component: ChatRoom,
         props: true,
+      },
+      {
+        path: Routes.ChatroomCreate,
+        component: ChatRoomCreateVue,
       },
     ],
   },

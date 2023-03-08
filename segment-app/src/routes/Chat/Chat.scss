@@ -1,15 +1,26 @@
 .page.page__chat {
   @apply flex flex-row items-start gap-3 h-full;
-  @apply bg-light-100 dark:bg-dark-900;
+  @apply bg-light-100 dark:bg-dark-800;
 
   max-height: 100vh;
   align-items: stretch;
 
   .chat__rooms {
-    @apply flex flex-col items-center gap-4;
+    @apply flex flex-col items-center;
     @apply rounded-2xl;
     @apply p-6 box-border;
-    @apply bg-light-50 dark:bg-dark-800;
+    @apply bg-light-50 dark:bg-dark-900;
+
+    .rooms_separator {
+      @apply bg-light-200 dark:bg-dark-900 my-3;
+
+      width: 100%;
+      height: 1px;
+    }
+
+    .rooms_list {
+      @apply flex flex-col items-center gap-4;
+    }
 
     .room {
       @apply flex justify-center items-center;
@@ -20,6 +31,7 @@
 
       width: 50px;
       height: 50px;
+      cursor: pointer;
       text-decoration: none;
 
       &:hover {
@@ -43,46 +55,68 @@
 
   .chat__room {
     @apply flex flex-col flex-1;
-    @apply bg-light-50 dark:bg-dark-800;
+    @apply bg-light-50 dark:bg-dark-900;
 
     overflow: hidden;
     width: 100%;
 
     .chatroom {
-      @apply flex flex-col flex-1;
+      @apply flex flex-col flex-1 items-center;
 
-      max-height: calc(100vh - (16*2px))
+      max-height: calc(100vh - (16 * 2px));
     }
 
     &,
     .room__header {
-      @apply rounded-2xl;
+      @apply rounded-2xl w-full;
     }
 
     .room__header {
       @apply px-8 py-6 box-border;
-      @apply shadow-sm rounded-b-none;
+      @apply shadow-sm rounded-b-none dark:shadow-md;
+    }
+
+    .room__empty {
+      @apply flex self-center;
+
+      width: fit-content;
+      height: 100%;
+      margin: auto;
+
+      span {
+        margin-top: auto;
+      }
     }
 
     .room__content {
       @apply p-8 box-border;
-      
+
       position: relative;
       overflow: auto;
+      width: 100%;
+      max-width: 1000px;
       height: 100%;
-      
+
       .room__messages {
-        @apply flex flex-col gap-4 justify-end;
+        @apply flex flex-col justify-end;
 
         margin-top: auto;
       }
 
       .message {
-        @apply flex flex-col;
+        @apply flex flex-row justify-start relative;
 
         &:not(:last-of-type) {
           @apply pb-2;
           @apply border-b border-b-light-300 dark:border-b-dark-300;
+        }
+
+        &__bubble {
+          @apply flex flex-col;
+          @apply bg-light-100/50 dark:bg-dark-800/50;
+          @apply px-4 py-2 rounded-xl rounded-tl-none;
+
+          width: fit-content;
         }
 
         &__header {
@@ -97,6 +131,54 @@
             @apply text-xs uppercase;
           }
         }
+
+        &__avatar {
+          @apply absolute;
+
+          top: -18px;
+          left: -18px;
+          width: 36px;
+          height: 36px;
+
+          .avatar {
+            @apply flex justify-center items-center;
+            @apply text-base text-light-50 dark:text-dark-50;
+            @apply border-light-50 dark:border-dark-900;
+            @apply rounded-full;
+
+            width: 100%;
+            height: 100%;
+            border-width: 4px;
+          }
+        }
+
+        &--self {
+          @apply justify-end;
+
+          .message__bubble {
+            @apply bg-primary-100 dark:bg-primary-800/50;
+            @apply rounded-tl-xl rounded-tr-none;
+          }
+
+          .message__avatar {
+            right: -18px;
+            left: unset;
+          }
+        }
+
+        &--after {
+          @apply border-none;
+
+          .message__bubble {
+            @apply rounded-br-none;
+          }
+        }
+
+        &--before {
+          .message__avatar {
+            @apply hidden;
+          }
+        }
       }
     }
 
@@ -109,7 +191,8 @@
       width: 100%;
       height: 104px;
 
-      .input, input {
+      .input,
+      input {
         @apply m-0;
 
         width: 100%;
@@ -120,11 +203,23 @@
 
         position: absolute;
         right: calc(2rem + 8px);
-        
+
         .icon {
           font-size: 20px;
         }
       }
+    }
+  }
+
+  .chatroom__create {
+    @apply flex flex-col justify-center self-center;
+
+    width: 100%;
+    max-width: 480px;
+    height: 100%;
+
+    .header {
+      @apply mb-4;
     }
   }
 }

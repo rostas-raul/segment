@@ -31,6 +31,18 @@ const en = {
   chat: {
     failedToFetchRooms:
       'An unexpected error happened while trying to fetch rooms. Please try again later.',
+    emptyRoom:
+      'Seems like this room is empty. Be the first one to say something!',
+    createChatRoom: {
+      header: 'Create a Chatroom',
+      inputLabelRoomName: 'Room Name',
+      inputPlaceholderRoomName: 'The room name',
+      inputLabelRoomDescription: 'Room Description',
+      inputPlaceholderRoomDescription: 'A short description',
+      inputLabelRoomPassword: 'Room Password',
+      inputPlaceholderRoomPassword: 'The password others join with',
+      buttonText: 'Create Chatroom',
+    },
   },
 
   errors: {

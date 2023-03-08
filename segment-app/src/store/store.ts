@@ -31,6 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userserver = ref(useStorage<string>('userserver', null));
   const deviceId = ref(useStorage<string>('deviceId', null));
   const accessToken = ref(useStorage<string>('accessToken', null));
+  const username = ref(useStorage<string>('username', null));
 
   async function login(
     userserver: string,
@@ -58,6 +59,8 @@ export const useAuthStore = defineStore('auth', () => {
       deviceId?: string;
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
+    await postLogin(userserver);
+
     return data;
   }
 
@@ -84,6 +87,24 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     return data;
+  }
+
+  async function postLogin(userserver: string) {
+    // fetch username
+    const res = await axios
+      .get<ApiResponse<{ username: string }>>(`${userserver}client/auth/self`, {
+        headers: {
+          Authorization: `Bearer ${accessToken.value}`,
+        },
+      })
+      .catch((err: AxiosError) => err);
+
+    const data: ApiResponse<{
+      username: string;
+    }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
+    username.value = data.data?.username;
+    console.log(username.value, data.data?.username, data);
   }
 
   async function generateKeyPair() {
@@ -152,6 +173,7 @@ export const useAuthStore = defineStore('auth', () => {
     userserver,
     deviceId,
     accessToken,
+    username,
     login,
     register,
     generateKeyPair,
@@ -161,6 +183,32 @@ export const useAuthStore = defineStore('auth', () => {
 
 export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore();
+
+  const rooms = ref<Room[]>([]);
+
+  async function createRoom(
+    userserver: string,
+    body: {
+      roomName: string;
+      roomDescription?: string;
+      roomVisibility?: 'public' | 'private';
+      roomPassword?: string;
+    },
+    ct: (err: AxiosError) => unknown,
+  ): Promise<ApiResponse<Room>> {
+    const res = await axios
+      .post<ApiResponse<Room>>(`${userserver}client/rooms/create`, body, {
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`,
+        },
+      })
+      .catch((err: AxiosError) => ct(err));
+
+    const data: ApiResponse<Room> =
+      (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
+    return data;
+  }
 
   async function fetchRooms(
     userserver: string,
@@ -176,6 +224,10 @@ export const useChatStore = defineStore('chat', () => {
 
     const data: ApiResponse<Room[]> =
       (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
+    if (data.data) {
+      rooms.value = data.data;
+    }
 
     return data;
   }
@@ -257,5 +309,12 @@ export const useChatStore = defineStore('chat', () => {
     return data;
   }
 
-  return { fetchRooms, fetchRoom, fetchMessages, sendMessage };
+  return {
+    createRoom,
+    fetchRooms,
+    fetchRoom,
+    fetchMessages,
+    sendMessage,
+    rooms,
+  };
 });
