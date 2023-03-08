@@ -1,4 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { User } from '@/decorators/user.decorator';
+import { UserToken } from '@/schema/dto/User';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { LoginUserDto, RegisterUserDto } from './auth.validation';
 
@@ -21,5 +24,11 @@ export class AuthController {
       loginUser.password,
       loginUser.deviceId,
     );
+  }
+
+  @Get('self')
+  @UseGuards(JwtAuthGuard)
+  public self(@User() user: UserToken) {
+    return this.authService.getSelf(user);
   }
 }

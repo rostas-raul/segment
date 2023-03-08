@@ -10,6 +10,7 @@ import { randomUUID } from 'crypto';
 import { Settings } from '@/main';
 import { JwtService } from '@nestjs/jwt';
 import { CommonArgonConfiguration } from '@/util/Crypto';
+import { UserToken } from '@/schema/dto/User';
 
 @Injectable()
 export class AuthService {
@@ -107,6 +108,16 @@ export class AuthService {
       data: {
         accessToken: this.jwtService.sign(payload),
         deviceId,
+      },
+    });
+  }
+
+  public async getSelf(user: UserToken) {
+    const u = await this.userModel.findOne({ _id: user._id });
+    return CreateApiResponse({
+      status: 'OK',
+      data: {
+        username: `${u.username}@${Settings.server.hostname}`,
       },
     });
   }
