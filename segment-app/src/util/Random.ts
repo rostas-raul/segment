@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
 
-export function randomString(length: number) {
+export function randomString() {
   return randomUUID();
 }

@@ -33,7 +33,6 @@ const room = (
 ).data!;
 
 const messages = ref<RoomMessage[]>([]);
-
 const message = ref('');
 
 async function sendMessage() {
@@ -80,6 +79,12 @@ onMounted(() => {
 });
 
 await fetchMessages();
+
+chatStore.currentRoom = async (event: string) => {
+  if (event === 'refresh.messages') {
+    await fetchMessages();
+  }
+};
 </script>
 
 <template>

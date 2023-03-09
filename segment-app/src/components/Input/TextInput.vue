@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
   type: 'text',
   placeholder: null,
   label: null,
-  id: randomString(12),
+  id: 'I' + randomString().split('-')[0],
   value: '',
   clearOnEnter: false,
 });

@@ -6,6 +6,7 @@ import { ipcRenderer } from 'electron';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { ApiResponse } from '@/types/Api';
 import { Room, RoomMessage } from '@/types/Room';
+import { io, Socket } from 'socket.io-client';
 
 /** Store used for settings and persistent things. */
 export const useLocalStore = defineStore('local', () => {
@@ -22,6 +23,8 @@ export const useLocalStore = defineStore('local', () => {
 
 /** Authentication related things */
 export const useAuthStore = defineStore('auth', () => {
+  const chatStore = useChatStore();
+
   const keypair = ref(
     useStorage<{ public: string | null; private: string | null }>('keypair', {
       public: null,
@@ -32,6 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
   const deviceId = ref(useStorage<string>('deviceId', null));
   const accessToken = ref(useStorage<string>('accessToken', null));
   const username = ref(useStorage<string>('username', null));
+  const socket = ref<null | Socket>(null);
 
   async function login(
     userserver: string,
@@ -60,6 +64,13 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     await postLogin(userserver);
+    socket.value = io(userserver, {
+      auth: {
+        token: accessToken,
+      },
+    });
+
+    registerSocket();
 
     return data;
   }
@@ -104,11 +115,34 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     username.value = data.data?.username;
-    console.log(username.value, data.data?.username, data);
   }
 
   async function generateKeyPair() {
     keypair.value = ipcRenderer.sendSync(IPCEvents.GenerateRSAKeyPair);
+  }
+
+  async function registerSocket() {
+    const s = socket.value;
+
+    // Handshake
+    s?.on('ws.handshake', (msg: ApiResponse) => {
+      if (msg.status === 'FAIL') {
+        throw new Error('Failed to authenticate with the WebSocket server!');
+      }
+    });
+
+    // Refresh the current chat
+    s?.on(
+      'ws.refresh',
+      (msg: ApiResponse<{ channel: 'room' | 'messages'; id?: string }>) => {
+        if (msg.data?.channel === 'messages') {
+          // Refresh the current chat's messages
+          if (chatStore.currentRoom !== null) {
+            chatStore.currentRoom('refresh.messages');
+          }
+        }
+      },
+    );
   }
 
   async function checkKeys(
@@ -174,6 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
     deviceId,
     accessToken,
     username,
+    socket,
     login,
     register,
     generateKeyPair,
@@ -185,6 +220,8 @@ export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore();
 
   const rooms = ref<Room[]>([]);
+
+  const currentRoom: (event: string) => unknown = () => null;
 
   async function createRoom(
     userserver: string,
@@ -315,6 +352,7 @@ export const useChatStore = defineStore('chat', () => {
     fetchRoom,
     fetchMessages,
     sendMessage,
+    currentRoom,
     rooms,
   };
 });
