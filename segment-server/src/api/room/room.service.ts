@@ -20,6 +20,7 @@ import {
 } from '@/schema/dto/Api';
 import { RoomMessage } from '@/schema/database/RoomMessage';
 import * as rsa from 'node-rsa';
+import { AppGateway } from '@/app.gateway';
 
 @Injectable()
 export class RoomService {
@@ -150,6 +151,7 @@ export class MessageService {
     @InjectModel(Models.Room) private readonly roomModel: Model<Room>,
     @InjectModel(Models.RoomMessage)
     private readonly messageModel: Model<RoomMessage>,
+    private readonly appGateway: AppGateway,
   ) {}
 
   public async getMessages(roomId: string, page: number, user: UserToken) {
@@ -183,13 +185,13 @@ export class MessageService {
     roomId: string,
     user: UserToken,
   ) {
+    const room = await this.roomModel.findOne({
+      id: roomId,
+      participants: `${user.username}@${Settings.server.hostname}`,
+    });
+
     // check if the user has permission to post in the room
-    if (
-      !(await this.roomModel.exists({
-        id: roomId,
-        participants: `${user.username}@${Settings.server.hostname}`,
-      }))
-    ) {
+    if (!room) {
       return CreateApiResponse({
         status: 'FAIL',
         message: CommonMessages.Unauthorized,
@@ -243,6 +245,18 @@ export class MessageService {
     });
 
     await message.save();
+
+    // Check if we need to send a notification to any of the participants
+    const users = room.participants
+      .filter((user) => user.endsWith(Settings.server.hostname))
+      .map((username) => username.split('@')[0]);
+
+    users.forEach((user) => {
+      this.appGateway.sendToUser(user, 'ws.refresh', {
+        channel: 'messages',
+        id: room.id,
+      });
+    });
 
     return CreateApiResponse({
       status: 'OK',
