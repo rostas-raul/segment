@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useChatStore, useLocalStore, useAuthStore } from '@/store/store';
-import { ref, Ref, watch, onMounted } from 'vue';
+import { ref, Ref, watch, onMounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { parseUserId, profilePictureColors } from '@/util/Common';
 import moment from 'moment';
@@ -61,21 +61,23 @@ async function fetchMessages() {
   ).data as any;
 }
 
-function scroll() {
+function scroll(behavior: 'smooth' | 'auto' = 'smooth') {
   const el = document.querySelector('.chatroom .room__content');
   el?.scrollTo({
     top: el.scrollHeight,
     left: 0,
-    behavior: 'smooth',
+    behavior,
   });
 }
 
 watch(messages, () => {
-  scroll();
+  nextTick(() => {
+    scroll();
+  });
 });
 
 onMounted(() => {
-  scroll();
+  scroll('auto');
 });
 
 await fetchMessages();
@@ -152,10 +154,25 @@ chatStore.currentRoom = async (event: string) => {
         v-model:value="message"
         placeholder="Enter your message..."
         :clear-on-enter="true"
-        @pressend-enter="sendMessage()" />
-      <button class="room__send" @click="sendMessage()">
+        @pressend-enter="sendMessage()"
+        :maxLength="1024" />
+      <button
+        class="room__send"
+        @click="sendMessage()"
+        :disabled="message.length === 0">
         <Icon>send</Icon>
       </button>
+
+      <span
+        class="room__amount text-light-600 dark:text-dark-300"
+        :class="{
+          'text-yellow-500 dark:text-yellow-200':
+            message.length > 800 && message.length < 1000,
+          'text-red-600 dark:text-red-300': message.length > 1000,
+        }"
+        v-if="message.length > 0"
+        >{{ message.length }}/1024</span
+      >
     </div>
   </div>
 </template>

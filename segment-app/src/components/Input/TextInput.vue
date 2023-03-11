@@ -10,6 +10,7 @@ interface Props {
   id?: string;
   value?: string;
   clearOnEnter?: boolean;
+  maxLength?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   id: 'I' + randomString().split('-')[0],
   value: '',
   clearOnEnter: false,
+  maxLength: 524288,
 });
 
 function keyPress(ev: any) {
@@ -53,7 +55,8 @@ function keyPress(ev: any) {
       class="input__element input_text"
       :value="value"
       @input="$emit('update:value', ($event.target as HTMLInputElement).value)"
-      @keypress="keyPress" />
+      @keypress="keyPress"
+      :maxlength="maxLength" />
   </div>
 </template>
 

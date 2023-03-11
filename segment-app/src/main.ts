@@ -18,6 +18,9 @@ import hu from './i18n/hu';
 import { useAuthStore } from './store/store';
 import ChatRoomCreateVue from './routes/Chat/ChatRoomCreate.vue';
 
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/animations/scale.css';
+
 // Meta things
 export const DOCUMENT_TITLE = 'segment';
 

@@ -58,12 +58,14 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    /* */
+    this.connectedSockets = this.connectedSockets.filter(
+      (s) => s[0].id !== client.id,
+    );
   }
 
   async sendToUser(username: string, message: string, data: any) {
     const s = this.connectedSockets;
     const found = s.find((socket) => socket[1].username === username);
-    found[0]?.emit(message, CreateApiResponse({ status: 'OK', data }));
+    found?.[0]?.emit(message, CreateApiResponse({ status: 'OK', data }));
   }
 }

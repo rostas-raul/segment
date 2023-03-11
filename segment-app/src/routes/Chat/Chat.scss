@@ -73,7 +73,11 @@
 
     .room__header {
       @apply px-8 py-6 box-border;
-      @apply shadow-sm rounded-b-none dark:shadow-md;
+      @apply shadow-lg rounded-b-none dark:shadow-black/20;
+
+      .header__description {
+        @apply text-sm text-light-600 dark:text-dark-300;
+      }
     }
 
     .room__empty {
@@ -97,6 +101,24 @@
       max-width: 1000px;
       height: 100%;
 
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        @apply bg-light-100 dark:bg-dark-800;
+        @apply rounded-full;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        @apply bg-light-400 dark:bg-dark-600;
+        @apply rounded-full;
+
+        &:hover {
+          @apply bg-light-600 dark:bg-dark-400;
+        }
+      }
+
       .room__messages {
         @apply flex flex-col justify-end;
 
@@ -105,10 +127,10 @@
 
       .message {
         @apply flex flex-row justify-start relative;
+        @apply pb-2;
 
-        &:not(:last-of-type) {
-          @apply pb-2;
-          @apply border-b border-b-light-300 dark:border-b-dark-300;
+        &:not(&--before) {
+          @apply mt-6;
         }
 
         &__bubble {
@@ -117,6 +139,12 @@
           @apply px-4 py-2 rounded-xl rounded-tl-none;
 
           width: fit-content;
+          max-width: 600px;
+
+          .message__content,
+          .message__content span {
+            overflow-wrap: anywhere;
+          }
         }
 
         &__header {
@@ -198,6 +226,10 @@
         width: 100%;
       }
 
+      .input input {
+        @apply pr-8;
+      }
+
       .room__send {
         @apply text-primary-500;
 
@@ -207,6 +239,19 @@
         .icon {
           font-size: 20px;
         }
+
+        &:disabled {
+          @apply text-light-600 dark:text-dark-600;
+
+          cursor: not-allowed;
+        }
+      }
+
+      .room__amount {
+        @apply absolute text-xs;
+
+        right: 2rem;
+        bottom: 0.5rem;
       }
     }
   }

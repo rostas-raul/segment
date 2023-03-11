@@ -6,6 +6,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -44,6 +45,7 @@ export class JoinRoomDto {
 export class SendMessageBodyDto {
   @IsString()
   @IsDefined()
+  @MaxLength(1024)
   content: string;
 
   @IsString()
