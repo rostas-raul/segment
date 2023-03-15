@@ -11,6 +11,7 @@ import { Settings } from '@/main';
 import { JwtService } from '@nestjs/jwt';
 import { CommonArgonConfiguration } from '@/util/Crypto';
 import { UserToken } from '@/schema/dto/User';
+import { usernameToId } from '@/util/Common';
 
 @Injectable()
 export class AuthService {
@@ -117,7 +118,7 @@ export class AuthService {
     return CreateApiResponse({
       status: 'OK',
       data: {
-        username: `${u.username}@${Settings.server.hostname}`,
+        username: usernameToId(u.username),
       },
     });
   }

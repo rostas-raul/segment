@@ -1,9 +1,20 @@
 import { User } from '@/decorators/user.decorator';
+import {
+  CommonMessages,
+  CreateApiResponse,
+  OutgoingRequest,
+} from '@/schema/dto/Api';
 import { UserToken } from '@/schema/dto/User';
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { MessageService, RoomService } from './room.service';
-import { CreateRoomDto, JoinRoomDto, SendMessageDto } from './room.validation';
+import {
+  CreateRoomDto,
+  ClientJoinRoomDto,
+  SendMessageDto,
+  ServerJoinRoomDto,
+} from './room.validation';
+import { validate } from 'class-validator';
 
 @Controller('/client/rooms')
 export class ClientRoomController {
@@ -55,7 +66,38 @@ export class ClientRoomController {
 
   @Post('join')
   @UseGuards(JwtAuthGuard)
-  public joinRoom(@Body() joinRoom: JoinRoomDto, @User() user: UserToken) {
+  public joinRoom(
+    @Body() joinRoom: ClientJoinRoomDto,
+    @User() user: UserToken,
+  ) {
     return this.roomService.joinRoom(joinRoom, user);
+  }
+}
+
+@Controller('/server/rooms')
+export class ServerRoomController {
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly messageService: MessageService,
+  ) {}
+
+  @Post('join')
+  public async joinRoom(@Body() joinRoom: OutgoingRequest<ServerJoinRoomDto>) {
+    // manual validation
+    const dto = new ServerJoinRoomDto();
+    dto.destination = joinRoom.data.destination;
+    dto.origin = joinRoom.data.origin;
+    dto.roomId = joinRoom.data.roomId;
+    dto.roomPassword = joinRoom.data.roomPassword;
+    dto.user = joinRoom.data.user;
+
+    if ((await validate(dto)).length > 0) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.ValidationError,
+      });
+    }
+
+    return this.roomService.serverJoinRoom(joinRoom);
   }
 }

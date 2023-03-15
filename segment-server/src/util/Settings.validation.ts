@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsDefined,
   IsNotEmpty,
@@ -24,6 +25,10 @@ export class SettingsServerValidator {
 
   @IsNumber()
   keySize: number;
+
+  @IsArray()
+  @IsNotEmpty()
+  disallowedHostnames: string[];
 }
 
 export class SettingsAuthValidator {

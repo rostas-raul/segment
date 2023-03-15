@@ -15,3 +15,7 @@ export function getServerPrivateKey() {
     'private',
   );
 }
+
+export function importKey(key: string, type: 'public' | 'private' = 'public') {
+  return new rsa().importKey(key, type);
+}

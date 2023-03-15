@@ -3,37 +3,52 @@ import { Room } from '@/schema/database/Room';
 import { User } from '@/schema/database/User';
 import { UserToken } from '@/schema/dto/User';
 import { Models } from '@/schema/Models';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CommonArgonConfiguration, sha256 } from '@/util/Crypto';
 import * as argon2 from 'argon2';
 import * as moment from 'moment';
 import { randomUUID } from 'crypto';
-import { CreateRoomDto, JoinRoomDto, SendMessageDto } from './room.validation';
-import { splitStringNth } from '@/util/Common';
 import {
+  CreateRoomDto,
+  ClientJoinRoomDto,
+  SendMessageDto,
+  ServerJoinRoomDto,
+} from './room.validation';
+import { splitStringNth, usernameToId } from '@/util/Common';
+import {
+  ApiResponse,
   CommonMessages,
   CreateApiResponse,
+  CreateOutgoingRequest,
+  getPayloadFromData,
   MessageMessages,
+  OutgoingRequest,
   RoomMessages,
 } from '@/schema/dto/Api';
 import { RoomMessage } from '@/schema/database/RoomMessage';
 import * as rsa from 'node-rsa';
 import { AppGateway } from '@/app.gateway';
+import { fetchKeysFromHost, shouldBlockRequest } from '@/util/HTTP';
+import { HttpService } from '@nestjs/axios';
+import { catchError, firstValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
+import { importKey } from '@/util/Key';
 
 @Injectable()
 export class RoomService {
   constructor(
     @InjectModel(Models.User) private readonly userModel: Model<User>,
     @InjectModel(Models.Room) private readonly roomModel: Model<Room>,
+    private readonly httpService: HttpService,
   ) {}
 
   public async getRooms(user: UserToken) {
     return CreateApiResponse({
       status: 'OK',
       data: await this.roomModel.find({
-        participants: `${user.username}@${Settings.server.hostname}`,
+        participants: usernameToId(user.username),
       }),
     });
   }
@@ -43,7 +58,7 @@ export class RoomService {
       status: 'OK',
       data: await this.roomModel.findOne({
         id: roomId,
-        participants: `${user.username}@${Settings.server.hostname}`,
+        participants: usernameToId(user.username),
       }),
     });
   }
@@ -59,7 +74,7 @@ export class RoomService {
 
       // Auto-generated
       id: randomUUID(),
-      participants: [`${user.username}@${Settings.server.hostname}`],
+      participants: [usernameToId(user.username)],
       createdAt: moment().toISOString(),
     });
 
@@ -71,7 +86,7 @@ export class RoomService {
     });
   }
 
-  public async joinRoom(joinRoom: JoinRoomDto, user: UserToken) {
+  public async joinRoom(joinRoom: ClientJoinRoomDto, user: UserToken) {
     const [roomId, roomHost] = splitStringNth(joinRoom.roomId, ':', 1);
     const roomPassword = joinRoom.roomPassword || null;
 
@@ -89,6 +104,7 @@ export class RoomService {
     roomId: string,
     roomPassword: string | null,
     user: UserToken,
+    origin: string | null = null,
   ) {
     const room = await this.roomModel.findOne({ id: roomId });
 
@@ -99,9 +115,7 @@ export class RoomService {
       });
     }
 
-    if (
-      room.participants.includes(`${user.username}@${Settings.server.hostname}`)
-    ) {
+    if (room.participants.includes(usernameToId(user.username))) {
       return CreateApiResponse({
         status: 'FAIL',
         message: RoomMessages.UserAlreadyJoined,
@@ -125,7 +139,7 @@ export class RoomService {
       });
     }
 
-    room.participants.push(`${user.username}@${Settings.server.hostname}`);
+    room.participants.push(usernameToId(user.username, origin));
     await room.save();
 
     return CreateApiResponse({
@@ -140,7 +154,151 @@ export class RoomService {
     roomPassword: string | null,
     user: UserToken,
   ) {
-    //
+    // Check if we are allowed to send a request to the host
+    if (shouldBlockRequest(roomHost))
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.InvalidHost,
+      });
+
+    // Send the request through the HTTP service
+    let requestError: null | ApiResponse = null;
+    const { data } = await firstValueFrom(
+      this.httpService
+        .post<ApiResponse<Room>>(
+          `http://${new URL('./server/rooms/join', roomHost)}`,
+          CreateOutgoingRequest<ServerJoinRoomDto>({
+            origin: Settings.server.hostname,
+            destination: roomHost,
+            roomId,
+            roomPassword,
+            user: usernameToId(user.username),
+          }),
+        )
+        .pipe(
+          catchError((_: AxiosError) => {
+            requestError = CreateApiResponse({
+              status: 'FAIL',
+              message: RoomMessages.InvalidOrOfflineHost,
+            });
+            throw requestError;
+          }),
+        ),
+    );
+
+    if (requestError) return requestError;
+
+    if (data.status === 'FAIL') {
+      let errorMessage: RoomMessages = RoomMessages.UnknownError;
+
+      switch (data.message) {
+        case RoomMessages.RoomNotFound:
+        case RoomMessages.RoomPasswordRequired:
+        case RoomMessages.RoomPasswordIncorrect:
+        case RoomMessages.UserAlreadyJoined:
+          errorMessage = data.message;
+      }
+
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: errorMessage,
+      });
+    } else {
+      const defaultResponse = CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.UnknownError,
+      });
+
+      const serverKey = await fetchKeysFromHost(roomHost, this.httpService);
+      if (!serverKey.data) return defaultResponse;
+
+      // check if the room exists
+      // if it does, check if the signature is valid
+      try {
+        if (
+          !data.data ||
+          importKey(serverKey.data).verify(
+            getPayloadFromData(data.data),
+            Buffer.from(data.signature),
+          )
+        ) {
+          return defaultResponse;
+        }
+      } catch {
+        return defaultResponse;
+      }
+
+      const room = new this.roomModel({
+        // the id is overwritten to prevent collision
+        id: `${roomHost}:${data.data.id}`,
+        ...data.data,
+      });
+
+      // attempt to save the room
+      try {
+        await room.save();
+      } catch {
+        // the room was invalid
+        return defaultResponse;
+      }
+
+      // TODO: sync request
+
+      // return the room to the user
+      return CreateApiResponse({
+        status: 'OK',
+        data: room,
+      });
+    }
+  }
+
+  public async serverJoinRoom(joinRoom: OutgoingRequest<ServerJoinRoomDto>) {
+    // check if we are for sure the destination
+    if (joinRoom.data.origin !== Settings.server.hostname) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.InvalidHost,
+      });
+    }
+
+    const defaultResponse = CreateApiResponse({
+      status: 'FAIL',
+      message: CommonMessages.InvalidOrigin,
+    });
+
+    // verify the origin
+    const serverKey = await fetchKeysFromHost(
+      joinRoom.data.origin,
+      this.httpService,
+    );
+    if (!serverKey.data) return defaultResponse;
+
+    // check if the data exists
+    // if it does, check if the signature is valid
+    try {
+      if (
+        !joinRoom.data ||
+        importKey(serverKey.data).verify(
+          getPayloadFromData(joinRoom.data),
+          Buffer.from(joinRoom.signature),
+        )
+      ) {
+        return defaultResponse;
+      }
+    } catch {
+      return defaultResponse;
+    }
+
+    // we can use localJoinRoom to try to join the room
+    return this.localJoinRoom(
+      joinRoom.data.roomId,
+      joinRoom.data.roomPassword,
+      {
+        _id: null,
+        deviceId: null,
+        username: joinRoom.data.user,
+      },
+    );
   }
 }
 
@@ -159,7 +317,7 @@ export class MessageService {
     if (
       !(await this.roomModel.exists({
         id: roomId,
-        participants: `${user.username}@${Settings.server.hostname}`,
+        participants: usernameToId(user.username),
       }))
     ) {
       return CreateApiResponse({
@@ -187,7 +345,7 @@ export class MessageService {
   ) {
     const room = await this.roomModel.findOne({
       id: roomId,
-      participants: `${user.username}@${Settings.server.hostname}`,
+      participants: usernameToId(user.username),
     });
 
     // check if the user has permission to post in the room
@@ -236,7 +394,7 @@ export class MessageService {
     const message = new this.messageModel({
       room: roomId,
       id: randomUUID(),
-      sender: `${user.username}@${Settings.server.hostname}`,
+      sender: usernameToId(user.username),
       body: {
         content: sendMessage.body.content,
         signature: sendMessage.body.signature,

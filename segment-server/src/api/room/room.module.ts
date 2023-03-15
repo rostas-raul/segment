@@ -9,6 +9,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClientRoomController } from './room.controller';
 import { MessageService, RoomService } from './room.service';
+import { HttpModule } from '@nestjs/axios';
+import { HttpConfigService } from '@/util/HTTP';
 
 @Module({
   imports: [
@@ -20,6 +22,9 @@ import { MessageService, RoomService } from './room.service';
     JwtModule.register({
       secret: config.jwtSecret,
       signOptions: { expiresIn: '7d' },
+    }),
+    HttpModule.registerAsync({
+      useClass: HttpConfigService,
     }),
   ],
   controllers: [ClientRoomController],

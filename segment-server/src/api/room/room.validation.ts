@@ -32,10 +32,32 @@ export class CreateRoomDto {
   roomPassword?: string;
 }
 
-export class JoinRoomDto {
+export class ClientJoinRoomDto {
   @IsString()
   @IsDefined()
   roomId: string;
+
+  @IsOptional()
+  @IsString()
+  roomPassword?: string;
+}
+
+export class ServerJoinRoomDto {
+  @IsString()
+  @IsDefined()
+  origin: string;
+
+  @IsString()
+  @IsDefined()
+  destination: string;
+
+  @IsString()
+  @IsDefined()
+  roomId: string;
+
+  @IsString()
+  @IsDefined()
+  user: string;
 
   @IsOptional()
   @IsString()

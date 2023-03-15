@@ -20,9 +20,15 @@ export interface ApiResponse<T = unknown, K = ApiMessages> {
   signature?: string;
 }
 
+export interface OutgoingRequest<T = unknown> {
+  data: T;
+  signature: string;
+}
+
 export enum CommonMessages {
   ValidationError = 'VALIDATION_ERROR',
   Unauthorized = 'UNAUTHORIZED',
+  InvalidOrigin = 'INVALID_ORIGIN',
 }
 
 export enum RoomMessages {
@@ -30,6 +36,9 @@ export enum RoomMessages {
   RoomPasswordRequired = 'PASSWORD_REQUIRED',
   RoomPasswordIncorrect = 'PASSWORD_INCORRECT',
   UserAlreadyJoined = 'USER_ALREADY_JOINED',
+  InvalidHost = 'INVALID_HOST',
+  InvalidOrOfflineHost = 'INVALID_OR_OFFLINE_HOST',
+  UnknownError = 'UNKNOWN_ERROR_FROM_HOST',
 }
 
 export enum MessageMessages {
@@ -72,10 +81,28 @@ export function CreateApiResponse<T = unknown, K = ApiMessages>(
 ): ApiResponse<T, K> {
   if (type === 'server' && !apiResponse.signature && !!apiResponse.data) {
     // Sign the data
-    const payload = sha256(JSON.stringify(apiResponse.data));
+    const payload = getPayloadFromData(apiResponse.data);
     const sig = getServerPrivateKey().sign(payload, 'base64');
     apiResponse.signature = sig;
   }
 
   return apiResponse;
+}
+
+export function CreateOutgoingRequest<T = string | number | boolean | object>(
+  data: T,
+): OutgoingRequest<T> {
+  const payload = getPayloadFromData(data);
+  const signature = getServerPrivateKey().sign(payload, 'base64');
+
+  return {
+    data,
+    signature,
+  };
+}
+
+export function getPayloadFromData<T = string | number | boolean | object>(
+  data: T,
+) {
+  return sha256(JSON.stringify(data));
 }
