@@ -42,6 +42,20 @@ export class ClientJoinRoomDto {
   roomPassword?: string;
 }
 
+export class ServerSyncRoomDto {
+  @IsString()
+  @IsDefined()
+  origin: string;
+
+  @IsString()
+  @IsDefined()
+  destination: string;
+
+  @IsString()
+  @IsDefined()
+  roomId: string;
+}
+
 export class ServerJoinRoomDto {
   @IsString()
   @IsDefined()

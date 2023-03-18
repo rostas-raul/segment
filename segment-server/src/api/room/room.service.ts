@@ -15,6 +15,7 @@ import {
   ClientJoinRoomDto,
   SendMessageDto,
   ServerJoinRoomDto,
+  ServerSyncRoomDto,
 } from './room.validation';
 import { splitStringNth, usernameToId } from '@/util/Common';
 import {
@@ -30,7 +31,11 @@ import {
 import { RoomMessage } from '@/schema/database/RoomMessage';
 import * as rsa from 'node-rsa';
 import { AppGateway } from '@/app.gateway';
-import { fetchKeysFromHost, shouldBlockRequest } from '@/util/HTTP';
+import {
+  fetchKeysFromHost,
+  fetchUserKeysFromHost,
+  shouldBlockRequest,
+} from '@/util/HTTP';
 import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
@@ -41,6 +46,8 @@ export class RoomService {
   constructor(
     @InjectModel(Models.User) private readonly userModel: Model<User>,
     @InjectModel(Models.Room) private readonly roomModel: Model<Room>,
+    @InjectModel(Models.RoomMessage)
+    private readonly messageModel: Model<RoomMessage>,
     private readonly httpService: HttpService,
   ) {}
 
@@ -142,10 +149,13 @@ export class RoomService {
     room.participants.push(usernameToId(user.username, origin));
     await room.save();
 
-    return CreateApiResponse({
-      status: 'OK',
-      data: room,
-    });
+    return CreateApiResponse(
+      {
+        status: 'OK',
+        data: room,
+      },
+      origin ? 'server' : 'client',
+    );
   }
 
   private async remoteJoinRoom(
@@ -217,7 +227,7 @@ export class RoomService {
       try {
         if (
           !data.data ||
-          importKey(serverKey.data).verify(
+          !importKey(serverKey.data).verify(
             getPayloadFromData(data.data),
             Buffer.from(data.signature),
           )
@@ -242,7 +252,8 @@ export class RoomService {
         return defaultResponse;
       }
 
-      // TODO: sync request
+      // sync the room's messages
+      await this.syncRoom(roomId, roomHost);
 
       // return the room to the user
       return CreateApiResponse({
@@ -252,9 +263,205 @@ export class RoomService {
     }
   }
 
+  public async syncRoom(roomId: string, roomHost: string) {
+    // Check if we are allowed to send a request to the host
+    if (shouldBlockRequest(roomHost))
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: 'HOST_BLOCKED',
+      });
+
+    // Send the request through the HTTP service
+    let requestError: null | ApiResponse = null;
+    const { data } = await firstValueFrom(
+      this.httpService
+        .post<ApiResponse<RoomMessage[]>>(
+          `http://${new URL('./server/rooms/sync', roomHost)}`,
+          CreateOutgoingRequest<ServerSyncRoomDto>({
+            origin: Settings.server.hostname,
+            destination: roomHost,
+            roomId,
+          }),
+        )
+        .pipe(
+          catchError((_: AxiosError) => {
+            requestError = CreateApiResponse({
+              status: 'FAIL',
+              message: RoomMessages.InvalidOrOfflineHost,
+            });
+            throw requestError;
+          }),
+        ),
+    );
+
+    if (requestError) return requestError;
+
+    if (data.status === 'FAIL') {
+      let errorMessage: RoomMessages = RoomMessages.UnknownError;
+
+      switch (data.message) {
+        case RoomMessages.RoomNotFound:
+        case RoomMessages.RoomPasswordRequired:
+        case RoomMessages.RoomPasswordIncorrect:
+        case RoomMessages.UserAlreadyJoined:
+          errorMessage = data.message;
+      }
+
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: errorMessage,
+      });
+    } else {
+      const defaultResponse = CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.UnknownError,
+      });
+
+      const serverKey = await fetchKeysFromHost(roomHost, this.httpService);
+      if (!serverKey.data) return defaultResponse;
+
+      try {
+        if (
+          !data.data ||
+          !importKey(serverKey.data).verify(
+            getPayloadFromData(data.data),
+            Buffer.from(data.signature),
+          )
+        ) {
+          return defaultResponse;
+        }
+      } catch {
+        return defaultResponse;
+      }
+
+      const keyCache: { [key: string]: rsa[] } = {};
+      const msg: RoomMessage[] = [];
+
+      // verify message signatures
+      data.data.forEach(async (message) => {
+        if (!keyCache[message.sender]) {
+          const keys = await fetchUserKeysFromHost(
+            roomHost,
+            message.sender,
+            true,
+            null,
+            this.httpService,
+          );
+
+          const keyStrings = [];
+          keys.data.forEach((k) => {
+            k.deprecated.forEach((d) => keyStrings.push(d.publicKey));
+            keyStrings.push(k.publicKey.content);
+          });
+
+          const keyInstances = [];
+          keyStrings.forEach((ks) => {
+            try {
+              keyInstances.push(importKey(ks, 'public'));
+            } catch {}
+          });
+
+          keyCache[message.sender] = keyInstances;
+        }
+
+        let flag = false;
+        try {
+          keyCache[message.sender].forEach((k) => {
+            const res = k.verify(
+              getPayloadFromData(message.body.content),
+              Buffer.from(message.body.signature),
+            );
+
+            if (res === true) flag = true;
+          });
+        } catch {
+          message.verified = false;
+        } finally {
+          flag === false
+            ? (message.verified = false)
+            : (message.verified = true);
+        }
+
+        const roomMessage = new this.messageModel(message);
+
+        try {
+          roomMessage.save();
+        } catch {}
+      });
+    }
+  }
+
+  public async serverSyncRoom(syncRoom: OutgoingRequest<ServerSyncRoomDto>) {
+    // check if we are the destination
+    if (syncRoom.data.destination !== Settings.server.hostname) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.InvalidHost,
+      });
+    }
+
+    const defaultResponse = CreateApiResponse({
+      status: 'FAIL',
+      message: CommonMessages.InvalidOrigin,
+    });
+
+    // verify the origin
+    const serverKey = await fetchKeysFromHost(
+      syncRoom.data.origin,
+      this.httpService,
+    );
+    if (!serverKey.data) return defaultResponse;
+
+    // check if the data exists
+    // if it does, check if the signature is valid
+    try {
+      if (
+        !syncRoom.data ||
+        !importKey(serverKey.data).verify(
+          getPayloadFromData(syncRoom.data),
+          Buffer.from(syncRoom.signature),
+        )
+      ) {
+        return defaultResponse;
+      }
+    } catch {
+      return defaultResponse;
+    }
+
+    // check if the room exists
+    const room = await this.roomModel.findOne({ id: syncRoom.data.roomId });
+
+    if (!room) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: RoomMessages.RoomNotFound,
+      });
+    }
+
+    // check if a member exists with the hostname
+    if (
+      !room.participants.some((x) => x.split('@')[1] === syncRoom.data.origin)
+    ) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.Unauthorized,
+      });
+    }
+
+    // send the messages
+    const messages = await this.messageModel.find({ room: room.id });
+    return CreateApiResponse(
+      {
+        status: 'OK',
+        data: messages,
+      },
+      'server',
+    );
+  }
+
   public async serverJoinRoom(joinRoom: OutgoingRequest<ServerJoinRoomDto>) {
     // check if we are for sure the destination
-    if (joinRoom.data.origin !== Settings.server.hostname) {
+    if (joinRoom.data.destination !== Settings.server.hostname) {
       return CreateApiResponse({
         status: 'FAIL',
         message: RoomMessages.InvalidHost,
@@ -278,7 +485,7 @@ export class RoomService {
     try {
       if (
         !joinRoom.data ||
-        importKey(serverKey.data).verify(
+        !importKey(serverKey.data).verify(
           getPayloadFromData(joinRoom.data),
           Buffer.from(joinRoom.signature),
         )
@@ -416,9 +623,12 @@ export class MessageService {
       });
     });
 
-    return CreateApiResponse({
-      status: 'OK',
-      data: message,
-    });
+    return CreateApiResponse(
+      {
+        status: 'OK',
+        data: message,
+      },
+      'server',
+    );
   }
 }

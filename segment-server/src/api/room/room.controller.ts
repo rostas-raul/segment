@@ -13,6 +13,7 @@ import {
   ClientJoinRoomDto,
   SendMessageDto,
   ServerJoinRoomDto,
+  ServerSyncRoomDto,
 } from './room.validation';
 import { validate } from 'class-validator';
 
@@ -80,6 +81,24 @@ export class ServerRoomController {
     private readonly roomService: RoomService,
     private readonly messageService: MessageService,
   ) {}
+
+  @Post('sync')
+  public async syncRoom(@Body() syncRoom: OutgoingRequest<ServerSyncRoomDto>) {
+    // manual validation
+    const dto = new ServerSyncRoomDto();
+    dto.destination = syncRoom.data.destination;
+    dto.origin = syncRoom.data.origin;
+    dto.roomId = syncRoom.data.roomId;
+
+    if ((await validate(dto)).length > 0) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.ValidationError,
+      });
+    }
+
+    return this.roomService.serverSyncRoom(syncRoom);
+  }
 
   @Post('join')
   public async joinRoom(@Body() joinRoom: OutgoingRequest<ServerJoinRoomDto>) {

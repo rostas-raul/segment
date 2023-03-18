@@ -33,6 +33,9 @@ export class RoomMessage {
     attachments?: RoomMessageAttachment[];
   };
 
+  /** True if the signature matches a publicly available key */
+  @Prop() verified?: boolean;
+
   /** The time and date the message was sent */
   @Prop() timestamp: string;
 }

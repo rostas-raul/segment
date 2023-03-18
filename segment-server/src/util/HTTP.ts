@@ -91,4 +91,110 @@ export async function fetchKeysFromHost<
       message: 'INVALID_KEYS',
     }) as R;
   }
+
+  return CreateApiResponse({
+    status: 'OK',
+    data: data.data,
+  }) as R;
+}
+
+export async function fetchUserKeysFromHost<
+  R = ApiResponse<
+    {
+      publicKey: {
+        id: string;
+        content: string;
+      };
+      deprecated: {
+        publicKey: string;
+        deprecatedAt: string;
+      }[];
+    }[],
+    'HOST_BLOCKED' | 'HOST_OFFLINE' | 'INVALID_KEYS' | 'USER_NOT_FOUND'
+  >,
+>(
+  hostname: string,
+  userId: string,
+  deprecated: boolean,
+  timestamp: string | null,
+  httpService: HttpService,
+): Promise<R> {
+  if (shouldBlockRequest(hostname))
+    return CreateApiResponse({
+      status: 'FAIL',
+      message: 'HOST_BLOCKED',
+    }) as R;
+
+  let requestError: null | R = null;
+  const { data } = await firstValueFrom(
+    httpService
+      .get<
+        ApiResponse<
+          {
+            publicKey: {
+              id: string;
+              content: string;
+            };
+            deprecated: {
+              publicKey: string;
+              deprecatedAt: string;
+            }[];
+          }[]
+        >
+      >(
+        `http://${new URL(
+          `./server/keys/${userId}`,
+          hostname,
+        )}?deprecated=${deprecated}&timestamp=${timestamp}`,
+      )
+      .pipe(
+        catchError((_: AxiosError) => {
+          requestError = CreateApiResponse({
+            status: 'FAIL',
+            message: 'HOST_OFFLINE',
+          }) as R;
+          throw requestError;
+        }),
+      ),
+  );
+
+  if (requestError) return requestError;
+
+  if (!data.data || !data.signature)
+    return CreateApiResponse({
+      status: 'FAIL',
+      message: 'INVALID_KEYS',
+    }) as R;
+
+  // verify the signature
+  const serverKey = await fetchKeysFromHost(hostname, httpService);
+  if (!serverKey.data)
+    return CreateApiResponse({
+      status: 'FAIL',
+      message: 'INVALID_KEYS',
+    }) as R;
+
+  try {
+    if (
+      importKey(serverKey.data).verify(
+        getPayloadFromData(data.data),
+        Buffer.from(data.signature),
+      )
+    ) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: 'INVALID_KEYS',
+      }) as R;
+    }
+  } catch {
+    return CreateApiResponse({
+      status: 'FAIL',
+      message: 'INVALID_KEYS',
+    }) as R;
+  }
+
+  return CreateApiResponse({
+    status: 'OK',
+    data: data.data,
+  }) as R;
 }

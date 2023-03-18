@@ -48,6 +48,7 @@ export enum MessageMessages {
 }
 
 export enum KeyMessages {
+  UserNotFound = 'USER_NOT_FOUND',
   InvalidSignature = 'INVALID_SIGNATURE',
 }
 
