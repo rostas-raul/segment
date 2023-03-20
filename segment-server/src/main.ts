@@ -33,6 +33,7 @@ async function bootstrap() {
   _settings.server.port =
     Settings.server.port || parseInt(process.env.PORT) || 3000;
   _settings.server.keySize = Settings.server.keySize || 2048;
+  _settings.server.disallowedHostnames = Settings.server.disallowedHostnames;
   _settings.auth = new SettingsAuthValidator();
   _settings.auth.allowRegistration = Settings.auth.allowRegistration;
   validate(_settings).then((err) => {

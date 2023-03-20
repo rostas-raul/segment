@@ -4,12 +4,7 @@
     "ip": "localhost",
     "port": 8080,
     "keySize": 2048,
-    /// Used to decline outgoing requests to certain
-    /// hostnames that match the strings below.
-    /// It is recommended to add your public IPv4/IPv6 address here, too.
-    /// Prefix regex expressions with "regex:"
     "disallowedHostnames": [
-      // Disallow requests to local services
       "regex:(0.0.0.0|127.0.0.1|localhost)(:(?!0)[0-9]{1,5})?"
     ]
   },
