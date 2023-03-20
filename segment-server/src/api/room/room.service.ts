@@ -586,7 +586,7 @@ export class MessageService {
 
     // check if the signature is valid
     const sig = sendMessage.body.signature;
-    const key = new rsa({ b: 1024 }).importKey(userPublicKey.content, 'public');
+    const key = importKey(userPublicKey.content, 'public');
 
     if (
       !key.verify(sha256(sendMessage.body.content), Buffer.from(sig, 'base64'))
@@ -623,12 +623,9 @@ export class MessageService {
       });
     });
 
-    return CreateApiResponse(
-      {
-        status: 'OK',
-        data: message,
-      },
-      'server',
-    );
+    return CreateApiResponse({
+      status: 'OK',
+      data: message,
+    });
   }
 }

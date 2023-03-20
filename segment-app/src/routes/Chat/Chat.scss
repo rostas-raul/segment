@@ -1,9 +1,48 @@
 .page.page__chat {
-  @apply flex flex-row items-start gap-3 h-full;
+  @apply flex flex-col items-start gap-3 h-full;
   @apply bg-light-100 dark:bg-dark-800;
 
   max-height: 100vh;
   align-items: stretch;
+
+  .chat__topbar {
+    @apply flex justify-between;
+    @apply p-3 box-border;
+
+    height: 65px;
+
+    .topbar__logo {
+      img {
+        max-width: 150px;
+      }
+    }
+
+    .topbar__user {
+      @apply flex gap-3 justify-center items-center;
+
+      .topbar__username {
+        @apply text-lg font-medium;
+      }
+
+      .topbar__avatar .avatar {
+        @apply flex justify-center items-center;
+        @apply text-base text-light-50 dark:text-dark-50;
+        @apply rounded-full;
+
+        width: 32px;
+        height: 32px;
+      }
+    }
+  }
+
+  .chat__wrapper {
+    @apply flex flex-row items-start gap-3 h-full;
+
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    align-items: stretch;
+  }
 
   .chat__rooms {
     @apply flex flex-col items-center;
@@ -63,7 +102,8 @@
     .chatroom {
       @apply flex flex-col flex-1 items-center;
 
-      max-height: calc(100vh - (16 * 2px));
+      // 100vh - padding - topbar - gap
+      max-height: calc(100vh - (16 * 2px) - 65px - 12px);
     }
 
     &,
@@ -89,124 +129,6 @@
 
       span {
         margin-top: auto;
-      }
-    }
-
-    .room__content {
-      @apply p-8 box-border;
-
-      position: relative;
-      overflow: auto;
-      width: 100%;
-      max-width: 1000px;
-      height: 100%;
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        @apply bg-light-100 dark:bg-dark-800;
-        @apply rounded-full;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        @apply bg-light-400 dark:bg-dark-600;
-        @apply rounded-full;
-
-        &:hover {
-          @apply bg-light-600 dark:bg-dark-400;
-        }
-      }
-
-      .room__messages {
-        @apply flex flex-col justify-end;
-
-        margin-top: auto;
-      }
-
-      .message {
-        @apply flex flex-row justify-start relative;
-        @apply pb-2;
-
-        &:not(&--before) {
-          @apply mt-6;
-        }
-
-        &__bubble {
-          @apply flex flex-col;
-          @apply bg-light-100/50 dark:bg-dark-800/50;
-          @apply px-4 py-2 rounded-xl rounded-tl-none;
-
-          width: fit-content;
-          max-width: 600px;
-
-          .message__content,
-          .message__content span {
-            overflow-wrap: anywhere;
-          }
-        }
-
-        &__header {
-          @apply flex flex-row items-center gap-2;
-
-          .message__sender {
-            @apply font-medium text-base;
-          }
-
-          .message__timestamp {
-            @apply text-light-700 dark:text-dark-400;
-            @apply text-xs uppercase;
-          }
-        }
-
-        &__avatar {
-          @apply absolute;
-
-          top: -18px;
-          left: -18px;
-          width: 36px;
-          height: 36px;
-
-          .avatar {
-            @apply flex justify-center items-center;
-            @apply text-base text-light-50 dark:text-dark-50;
-            @apply border-light-50 dark:border-dark-900;
-            @apply rounded-full;
-
-            width: 100%;
-            height: 100%;
-            border-width: 4px;
-          }
-        }
-
-        &--self {
-          @apply justify-end;
-
-          .message__bubble {
-            @apply bg-primary-100 dark:bg-primary-800/50;
-            @apply rounded-tl-xl rounded-tr-none;
-          }
-
-          .message__avatar {
-            right: -18px;
-            left: unset;
-          }
-        }
-
-        &--after {
-          @apply border-none;
-
-          .message__bubble {
-            @apply rounded-br-none;
-          }
-        }
-
-        &--before {
-          .message__avatar {
-            @apply hidden;
-          }
-        }
       }
     }
 
@@ -252,6 +174,138 @@
 
         right: 2rem;
         bottom: 0.5rem;
+      }
+    }
+
+    .room__content {
+      @apply px-8 pt-4 pb-0 box-border;
+
+      position: relative;
+      overflow: auto;
+      width: 100%;
+      max-width: 1000px;
+      height: 100%;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        @apply bg-light-100 dark:bg-dark-800;
+        @apply rounded-full;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        @apply bg-light-400 dark:bg-dark-600;
+        @apply rounded-full;
+
+        &:hover {
+          @apply bg-light-600 dark:bg-dark-400;
+        }
+      }
+
+      .room__messages {
+        @apply flex flex-col justify-end;
+
+        margin-top: auto;
+      }
+
+      .message {
+        @apply flex flex-row justify-start relative;
+        @apply pb-2;
+
+        &:not(&--before) {
+          @apply mt-6;
+        }
+
+        &__bubble {
+          @apply flex flex-col;
+          @apply bg-light-100/50 dark:bg-dark-800/50;
+          @apply px-4 py-2 rounded-xl rounded-tl-none;
+
+          position: relative;
+          z-index: 0;
+          width: fit-content;
+          max-width: 600px;
+
+          .message__content,
+          .message__content span {
+            overflow-wrap: anywhere;
+          }
+
+          .message__pending {
+            position: absolute;
+            right: 1rem;
+            bottom: 0.5rem;
+
+            .icon {
+              @apply text-sm;
+              @apply text-light-700 dark:text-dark-400;
+            }
+          }
+        }
+
+        &__header {
+          @apply flex flex-row items-center gap-2;
+
+          .message__sender {
+            @apply font-medium text-base;
+          }
+
+          .message__timestamp {
+            @apply text-light-700 dark:text-dark-400;
+            @apply text-xs uppercase;
+          }
+        }
+
+        &__avatar {
+          @apply absolute;
+
+          z-index: 1;
+          top: -18px;
+          left: -18px;
+          width: 36px;
+          height: 36px;
+
+          .avatar {
+            @apply flex justify-center items-center;
+            @apply text-base text-light-50 dark:text-dark-50;
+            @apply border-light-50 dark:border-dark-900;
+            @apply rounded-full;
+
+            width: 100%;
+            height: 100%;
+            border-width: 4px;
+          }
+        }
+
+        &--self {
+          @apply justify-end;
+
+          .message__bubble {
+            @apply bg-primary-100 dark:bg-primary-800/50;
+            @apply rounded-tl-xl rounded-tr-none;
+          }
+
+          .message__avatar {
+            right: -18px;
+            left: unset;
+          }
+        }
+
+        &--after {
+          @apply border-none;
+
+          .message__bubble {
+            @apply rounded-br-none;
+          }
+        }
+
+        &--before {
+          .message__avatar {
+            @apply hidden;
+          }
+        }
       }
     }
   }

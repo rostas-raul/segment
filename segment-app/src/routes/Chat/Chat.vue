@@ -1,12 +1,15 @@
 <script lang="ts" setup>
 import { Routes, useTranslator } from '@/main';
-import { useChatStore, useLocalStore } from '@/store/store';
+import { useAuthStore, useChatStore, useLocalStore } from '@/store/store';
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import tippy, { Props as TippyProps } from 'tippy.js';
+import Logo from '@/components/Logo/Logo.vue';
+import { parseUserId, profilePictureColors } from '@/util/Common';
 
 const { t } = useTranslator();
 const chatStore = useChatStore();
 const localStore = useLocalStore();
+const authStore = useAuthStore();
 
 await chatStore.fetchRooms(localStore.lastUserserver.host, (err) => {
   error.value = t('chat.failedToFetchRooms');
@@ -50,30 +53,57 @@ watch(rooms, () => {
 
 <template>
   <div class="page page__chat">
-    <div class="chat__rooms">
-      <div class="rooms_list">
-        <RouterLink
-          class="room"
-          v-for="room in rooms"
-          :key="room.id"
-          :to="`${Routes.Chat}/${room.id}`"
-          :data-tooltip="room.roomName">
-          {{ room.roomName.substring(0, 1) }}
-        </RouterLink>
+    <div class="chat__topbar">
+      <div class="topbar__logo">
+        <Logo :text="true" />
       </div>
-      <div class="rooms_separator" v-if="rooms?.length" />
-      <div class="rooms_create">
-        <RouterLink
-          :to="Routes.ChatroomCreate"
-          class="room room_create"
-          data-tooltip="New Chatroom">
-          +
-        </RouterLink>
+
+      <div class="topbar__user">
+        <div class="topbar__username">
+          {{ parseUserId(authStore.username).name }}
+        </div>
+        <div class="topbar__avatar">
+          <div
+            class="avatar"
+            :style="{
+              background: `linear-gradient(to bottom right, ${
+                profilePictureColors(parseUserId(authStore.username).name)
+                  .background[0]
+              } 0%, ${
+                profilePictureColors(parseUserId(authStore.username).name)
+                  .background[1]
+              } 100%)`,
+            }">
+            {{ parseUserId(authStore.username).name[0].toUpperCase() }}
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="chat__room">
-      <RouterView :key="($route.params.roomId as string) || ''" />
+    <div class="chat__wrapper">
+      <div class="chat__rooms">
+        <div class="rooms_list">
+          <RouterLink
+            class="room"
+            v-for="room in rooms"
+            :key="room.id"
+            :to="`${Routes.Chat}/${room.id}`"
+            :data-tooltip="room.roomName">
+            {{ room.roomName.substring(0, 1) }}
+          </RouterLink>
+        </div>
+        <div class="rooms_separator" v-if="rooms?.length" />
+        <div class="rooms_create">
+          <RouterLink
+            :to="Routes.ChatroomCreate"
+            class="room room_create"
+            data-tooltip="New Chatroom">
+            +
+          </RouterLink>
+        </div>
+      </div>
+      <div class="chat__room">
+        <RouterView :key="($route.params.roomId as string) || ''" />
+      </div>
     </div>
   </div>
 </template>

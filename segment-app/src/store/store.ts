@@ -342,7 +342,7 @@ export const useChatStore = defineStore('chat', () => {
       )
       .catch((err: AxiosError) => ct(err));
 
-    const data: ApiResponse<RoomMessage[]> =
+    const data: ApiResponse<RoomMessage> =
       (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     return data;

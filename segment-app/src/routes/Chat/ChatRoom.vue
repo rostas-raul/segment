@@ -8,6 +8,7 @@ import TextInput from '@/components/Input/TextInput.vue';
 import Icon from '@/components/Icon/Icon.vue';
 import { RoomMessage } from '@/types/Room';
 import { useTranslator } from '@/main';
+import { randomUUID } from 'crypto';
 
 interface Params {
   roomId: string;
@@ -32,11 +33,30 @@ const room = (
   )
 ).data!;
 
-const messages = ref<RoomMessage[]>([]);
+const messages = ref<Array<RoomMessage & { pending?: boolean }>>([]);
 const message = ref('');
 
 async function sendMessage() {
-  await chatStore.sendMessage(
+  const id = randomUUID();
+
+  // temporarily add the message as pending
+  messages.value.push({
+    id,
+    body: {
+      content: message.value,
+      signature: 'null',
+    },
+    room: params.value.roomId,
+    sender: authStore.username,
+    timestamp: new Date().toISOString(),
+    pending: true,
+  });
+
+  nextTick(() => {
+    scroll();
+  });
+
+  const res = await chatStore.sendMessage(
     localStore.lastUserserver.host,
     params.value.roomId,
     message.value,
@@ -46,6 +66,11 @@ async function sendMessage() {
   );
 
   message.value = '';
+
+  if (res.data) {
+    // replace the pending message
+    messages.value[messages.value.findIndex((msg) => msg.id === id)] = res.data;
+  }
 }
 
 async function fetchMessages() {
@@ -137,6 +162,9 @@ chatStore.currentRoom = async (event: string) => {
             </div>
             <div class="message__content">
               <span>{{ message.body.content }}</span>
+            </div>
+            <div class="message__pending" v-if="message.pending">
+              <Icon>schedule</Icon>
             </div>
           </div>
         </div>
