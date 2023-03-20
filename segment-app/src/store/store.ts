@@ -64,13 +64,6 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     await postLogin(userserver);
-    socket.value = io(userserver, {
-      auth: {
-        token: accessToken,
-      },
-    });
-
-    registerSocket();
 
     return data;
   }
@@ -115,6 +108,14 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     username.value = data.data?.username;
+
+    socket.value = io(userserver, {
+      auth: {
+        token: accessToken,
+      },
+    });
+
+    registerSocket();
   }
 
   async function generateKeyPair() {
@@ -211,6 +212,7 @@ export const useAuthStore = defineStore('auth', () => {
     socket,
     login,
     register,
+    postLogin,
     generateKeyPair,
     uploadKeys,
   };

@@ -15,7 +15,7 @@ import Chat from './routes/Chat/Chat.vue';
 import ChatRoom from './routes/Chat/ChatRoom.vue';
 import en from './i18n/en';
 import hu from './i18n/hu';
-import { useAuthStore } from './store/store';
+import { useAuthStore, useLocalStore } from './store/store';
 import ChatRoomCreateVue from './routes/Chat/ChatRoomCreate.vue';
 
 import 'tippy.js/dist/tippy.css';
@@ -107,6 +107,7 @@ createApp(App).use(createPinia()).use(router).use(i18n).mount('#root');
 
 // Some events
 const authStore = useAuthStore();
+const localStore = useLocalStore();
 
 if (
   !authStore.keypair ||
@@ -114,4 +115,13 @@ if (
   !authStore.keypair.private
 ) {
   authStore.generateKeyPair();
+}
+
+// Try to sign into the last session
+if (
+  authStore.accessToken &&
+  localStore.lastUserserver.host &&
+  localStore.lastUserserver.username
+) {
+  await authStore.postLogin(localStore.lastUserserver.host);
 }
