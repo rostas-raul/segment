@@ -16,6 +16,7 @@ import {
   SendMessageDto,
   ServerJoinRoomDto,
   ServerSyncRoomDto,
+  SubmitDHKeyDto,
 } from './room.validation';
 import { splitStringNth, usernameToId } from '@/util/Common';
 import {
@@ -55,7 +56,7 @@ export class RoomService {
     return CreateApiResponse({
       status: 'OK',
       data: await this.roomModel.find({
-        participants: usernameToId(user.username),
+        participants: { sub: usernameToId(user.username) },
       }),
     });
   }
@@ -65,7 +66,7 @@ export class RoomService {
       status: 'OK',
       data: await this.roomModel.findOne({
         id: roomId,
-        participants: usernameToId(user.username),
+        participants: { sub: usernameToId(user.username) },
       }),
     });
   }
@@ -80,7 +81,7 @@ export class RoomService {
         : null,
 
       // Auto-generated
-      id: randomUUID(),
+      id: roomOptions.dm === true ? randomUUID() : `dm!${randomUUID()}`,
       participants: [{ sub: usernameToId(user.username), status: 0 }, ...roomOptions.participants.map(x => ({sub: x, status: 1}))],
       createdAt: moment().toISOString(),
     });
@@ -513,6 +514,55 @@ export class RoomService {
       },
     );
   }
+
+  public async submitDHKey(submitDHKey: SubmitDHKeyDto, roomId: string, user: UserToken) {
+    // Check if there is a room where the user is a participant
+    const room = await this.roomModel.findOne({
+      id: roomId,
+      participants: { sub: usernameToId(user.username) },
+    });
+    
+    if (
+      !room
+    ) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.Unauthorized,
+      });
+    }
+
+    // Check if the room is a dm or not
+    if (!room.id.startsWith('dm!')) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.NotPossible,
+      });
+    }
+
+    // Check if the user has already submitted an ephemeral key
+    if (room._ephemeral.some(x => x.sub === usernameToId(user.username))) {
+      // Replace it
+      const i = room._ephemeral.findIndex(x => x.sub === usernameToId(user.username))
+      room._ephemeral[i].key = submitDHKey.publicKey;
+      room._ephemeral[i].rel = false;
+      room._ephemeral[i].ts = moment().toISOString();
+    }
+
+    // Create it
+    room._ephemeral.push({
+      sub: usernameToId(user.username),
+      key: submitDHKey.publicKey,
+      rel: false,
+      ts: moment().toISOString(),
+    });
+
+    room.markModified('_ephemeral');
+    await room.save();
+
+    // TODO: relay the key to the other participant
+
+    return CreateApiResponse({ status: 'OK' });
+  }
 }
 
 @Injectable()
@@ -530,7 +580,7 @@ export class MessageService {
     if (
       !(await this.roomModel.exists({
         id: roomId,
-        participants: usernameToId(user.username),
+        participants: { sub: usernameToId(user.username) },
       }))
     ) {
       return CreateApiResponse({
@@ -558,7 +608,7 @@ export class MessageService {
   ) {
     const room = await this.roomModel.findOne({
       id: roomId,
-      participants: usernameToId(user.username),
+      participants: { sub: usernameToId(user.username) },
     });
 
     // check if the user has permission to post in the room

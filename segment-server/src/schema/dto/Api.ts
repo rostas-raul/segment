@@ -29,6 +29,7 @@ export enum CommonMessages {
   ValidationError = 'VALIDATION_ERROR',
   Unauthorized = 'UNAUTHORIZED',
   InvalidOrigin = 'INVALID_ORIGIN',
+  NotPossible = 'NOT_POSSIBLE',
 }
 
 export enum RoomMessages {

@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDefined,
   IsIn,
   IsNotEmptyObject,
@@ -35,6 +36,10 @@ export class CreateRoomDto {
   @IsOptional()
   @IsArray()
   participants?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  dm?: boolean;
 }
 
 export class ClientJoinRoomDto {
@@ -101,4 +106,10 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => SendMessageBodyDto)
   body!: SendMessageBodyDto;
+}
+
+export class SubmitDHKeyDto {
+  @IsString()
+  @IsDefined()
+  publicKey: string;
 }
