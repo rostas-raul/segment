@@ -3,11 +3,18 @@ import { HydratedDocument } from 'mongoose';
 
 @Schema()
 export class Room {
+  /** Optional array for storing submitted ephemeral keys */
+  @Prop() _ephemeral?: { sub: string; key: string; ts: string; rel: boolean; }[];
+
   /** A unique UUID created for the room. */
   @Prop({ index: { unique: true } }) id: string;
 
   /** A list of participants that are engaging in the conversation. */
-  @Prop() participants: string[];
+  /** 
+   * `status` `0` means active participant.
+   * `status` `1` means invited participant.
+   */
+  @Prop() participants: { sub: string; status: number }[];
 
   /** A custom string users can provde for their room. */
   @Prop() roomName: string;

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDefined,
   IsIn,
   IsNotEmptyObject,
@@ -30,6 +31,10 @@ export class CreateRoomDto {
   @IsOptional()
   @IsString()
   roomPassword?: string;
+
+  @IsOptional()
+  @IsArray()
+  participants?: string[];
 }
 
 export class ClientJoinRoomDto {

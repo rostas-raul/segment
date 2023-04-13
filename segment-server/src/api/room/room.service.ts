@@ -81,7 +81,7 @@ export class RoomService {
 
       // Auto-generated
       id: randomUUID(),
-      participants: [usernameToId(user.username)],
+      participants: [{ sub: usernameToId(user.username), status: 0 }, ...roomOptions.participants.map(x => ({sub: x, status: 1}))],
       createdAt: moment().toISOString(),
     });
 
@@ -122,7 +122,7 @@ export class RoomService {
       });
     }
 
-    if (room.participants.includes(usernameToId(user.username))) {
+    if (room.participants.some(x => x.sub === usernameToId(user.username))) {
       return CreateApiResponse({
         status: 'FAIL',
         message: RoomMessages.UserAlreadyJoined,
@@ -146,7 +146,13 @@ export class RoomService {
       });
     }
 
-    room.participants.push(usernameToId(user.username, origin));
+    if (room.participants.some(x => x.sub === usernameToId(user.username, origin))) {
+      room.participants[room.participants.findIndex(x => x.sub === usernameToId(user.username, origin))].status = 0;
+    } else {
+      room.participants.push({ sub: usernameToId(user.username, origin), status: 0 });
+    }
+
+    room.markModified('participants');
     await room.save();
 
     return CreateApiResponse(
@@ -440,7 +446,7 @@ export class RoomService {
 
     // check if a member exists with the hostname
     if (
-      !room.participants.some((x) => x.split('@')[1] === syncRoom.data.origin)
+      !room.participants.some((x) => x.sub.split('@')[1] === syncRoom.data.origin)
     ) {
       return CreateApiResponse({
         status: 'FAIL',
@@ -613,8 +619,8 @@ export class MessageService {
 
     // Check if we need to send a notification to any of the participants
     const users = room.participants
-      .filter((user) => user.endsWith(Settings.server.hostname))
-      .map((username) => username.split('@')[0]);
+      .filter((user) => user.sub.endsWith(Settings.server.hostname))
+      .map((username) => username.sub.split('@')[0]);
 
     users.forEach((user) => {
       this.appGateway.sendToUser(user, 'ws.refresh', {
