@@ -5,6 +5,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import tippy, { Props as TippyProps } from 'tippy.js';
 import Logo from '@/components/Logo/Logo.vue';
 import { parseUserId, profilePictureColors } from '@/util/Common';
+import ThemeSwitcher from '@/components/ThemeSwitcher/ThemeSwitcher.vue';
 
 const { t } = useTranslator();
 const chatStore = useChatStore();
@@ -58,23 +59,29 @@ watch(rooms, () => {
         <Logo :text="true" />
       </div>
 
-      <div class="topbar__user">
-        <div class="topbar__username">
-          {{ parseUserId(authStore.username).name }}
+      <div class="topbar__right">
+        <div class="topbar__themeSwitcher">
+          <ThemeSwitcher />
         </div>
-        <div class="topbar__avatar">
-          <div
-            class="avatar"
-            :style="{
-              background: `linear-gradient(to bottom right, ${
-                profilePictureColors(parseUserId(authStore.username).name)
-                  .background[0]
-              } 0%, ${
-                profilePictureColors(parseUserId(authStore.username).name)
-                  .background[1]
-              } 100%)`,
-            }">
-            {{ parseUserId(authStore.username).name[0].toUpperCase() }}
+
+        <div class="topbar__user">
+          <div class="topbar__username">
+            {{ parseUserId(authStore.username).name }}
+          </div>
+          <div class="topbar__avatar">
+            <div
+              class="avatar"
+              :style="{
+                background: `linear-gradient(to bottom right, ${
+                  profilePictureColors(parseUserId(authStore.username).name)
+                    .background[0]
+                } 0%, ${
+                  profilePictureColors(parseUserId(authStore.username).name)
+                    .background[1]
+                } 100%)`,
+              }">
+              {{ parseUserId(authStore.username).name[0].toUpperCase() }}
+            </div>
           </div>
         </div>
       </div>

@@ -56,7 +56,7 @@ export class RoomService {
     return CreateApiResponse({
       status: 'OK',
       data: await this.roomModel.find({
-        participants: { sub: usernameToId(user.username) },
+        'participants.sub': usernameToId(user.username),
       }),
     });
   }
@@ -66,7 +66,7 @@ export class RoomService {
       status: 'OK',
       data: await this.roomModel.findOne({
         id: roomId,
-        participants: { sub: usernameToId(user.username) },
+        'participants.sub': usernameToId(user.username),
       }),
     });
   }
@@ -81,8 +81,8 @@ export class RoomService {
         : null,
 
       // Auto-generated
-      id: roomOptions.dm === true ? randomUUID() : `dm!${randomUUID()}`,
-      participants: [{ sub: usernameToId(user.username), status: 0 }, ...roomOptions.participants.map(x => ({sub: x, status: 1}))],
+      id: roomOptions.dm === true ? `dm!${randomUUID()}` : randomUUID(),
+      participants: [{ sub: usernameToId(user.username), status: 0 }, ...(roomOptions.participants || [])?.map(x => ({sub: x, status: 1}))],
       createdAt: moment().toISOString(),
     });
 
@@ -519,7 +519,7 @@ export class RoomService {
     // Check if there is a room where the user is a participant
     const room = await this.roomModel.findOne({
       id: roomId,
-      participants: { sub: usernameToId(user.username) },
+      'participants.sub': usernameToId(user.username),
     });
     
     if (
@@ -580,7 +580,7 @@ export class MessageService {
     if (
       !(await this.roomModel.exists({
         id: roomId,
-        participants: { sub: usernameToId(user.username) },
+        'participants.sub': usernameToId(user.username),
       }))
     ) {
       return CreateApiResponse({
@@ -608,7 +608,7 @@ export class MessageService {
   ) {
     const room = await this.roomModel.findOne({
       id: roomId,
-      participants: { sub: usernameToId(user.username) },
+      'participants.sub': usernameToId(user.username),
     });
 
     // check if the user has permission to post in the room

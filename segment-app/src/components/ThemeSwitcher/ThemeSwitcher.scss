@@ -1,0 +1,13 @@
+.themeSwitcher {
+    @apply flex justify-center items-center;
+    @apply p-2 rounded-full;
+    @apply hover:bg-light-200 active:bg-light-300;
+    @apply dark:hover:bg-dark-700 dark:active:bg-dark-600;
+
+    width: 40px;
+    height: 40px;
+
+    .icon {
+        font-size: 20px;
+    }
+}

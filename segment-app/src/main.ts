@@ -123,5 +123,5 @@ if (
   localStore.lastUserserver.host &&
   localStore.lastUserserver.username
 ) {
-  await authStore.postLogin(localStore.lastUserserver.host);
+  await authStore.postLogin(localStore.lastUserserver.host, authStore.accessToken);
 }

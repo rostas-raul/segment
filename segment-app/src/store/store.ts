@@ -18,7 +18,12 @@ export const useLocalStore = defineStore('local', () => {
     }),
   );
 
-  return { theme, lastUserserver };
+  function toggleTheme() {
+    theme.value === 'dark' ? theme.value = 'light' : theme.value = 'dark';
+    document.documentElement.setAttribute('data-theme', theme.value);
+  }
+
+  return { theme, lastUserserver, toggleTheme };
 });
 
 /** Authentication related things */
@@ -63,7 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
       deviceId?: string;
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
-    await postLogin(userserver);
+    await postLogin(userserver, data.data?.accessToken || null);
 
     return data;
   }
@@ -93,12 +98,14 @@ export const useAuthStore = defineStore('auth', () => {
     return data;
   }
 
-  async function postLogin(userserver: string) {
+  async function postLogin(userserver: string, accessToken: string | null) {
+    if (!accessToken) return;
+
     // fetch username
     const res = await axios
       .get<ApiResponse<{ username: string }>>(`${userserver}client/auth/self`, {
         headers: {
-          Authorization: `Bearer ${accessToken.value}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       })
       .catch((err: AxiosError) => err);
@@ -180,6 +187,11 @@ export const useAuthStore = defineStore('auth', () => {
     ct: (err: AxiosError) => unknown,
   ) {
     const uploaded = await checkKeys(userserver, ct);
+    
+    // Failsaife in case keypair doesn't exist
+    if (!keypair.value.public || !keypair.value.private) {
+      await generateKeyPair();
+    }
 
     if (!uploaded) {
       const res = await axios
