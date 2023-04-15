@@ -44,5 +44,10 @@ export interface RoomMessage {
     signature: string;
     attachments?: RoomMessageAttachment[];
   };
+  encryption?: {
+    iv: string;
+    salt: string;
+    authTag: string;
+  };
   timestamp: string;
 }

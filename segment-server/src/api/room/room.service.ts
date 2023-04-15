@@ -696,6 +696,7 @@ export class MessageService {
         content: sendMessage.body.content,
         signature: sendMessage.body.signature,
       },
+      encryption: sendMessage.encryption || undefined,
       timestamp: moment().toISOString(),
     });
 
@@ -705,8 +706,6 @@ export class MessageService {
     const users = room.participants
       .filter((user) => user.sub.endsWith(Settings.server.hostname))
       .map((username) => username.sub.split('@')[0]);
-
-    console.log(users);
 
     users.forEach((user) => {
       this.appGateway.sendToUser(user, 'ws.refresh', {

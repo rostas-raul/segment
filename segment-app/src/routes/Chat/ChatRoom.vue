@@ -33,7 +33,7 @@ const room = (
   )
 ).data!;
 
-const messages = ref<Array<RoomMessage & { pending?: boolean }>>([]);
+const messages = ref<Array<RoomMessage & { status?: number }>>([]);
 const message = ref('');
 
 async function sendMessage() {
@@ -49,7 +49,7 @@ async function sendMessage() {
     room: params.value.roomId,
     sender: authStore.username,
     timestamp: new Date().toISOString(),
-    pending: true,
+    status: 1,
   });
 
   nextTick(() => {
@@ -66,6 +66,8 @@ async function sendMessage() {
   );
 
   message.value = '';
+
+  if (!res) return;
 
   if (res.data) {
     // replace the pending message
@@ -133,6 +135,12 @@ chatStore.currentRoom = async (event: string) => {
               ?.sender === message.sender && 'message--after',
             messages[messages.findIndex((x) => x.id === message.id) - 1]
               ?.sender === message.sender && 'message--before',
+            message.status === 2 && 'message--failed',
+            message.encryption &&
+              !chatStore.encryptedMessageCache.find(
+                (msg) => msg.sub === `${message.room}:${message.id}`,
+              ) &&
+              'message--decryptionFailed',
           ]"
           v-for="message in messages"
           :key="message.id">
@@ -162,11 +170,39 @@ chatStore.currentRoom = async (event: string) => {
                 moment(message.timestamp).fromNow()
               }}</span>
             </div>
-            <div class="message__content">
-              <span>{{ message.body.content }}</span>
-            </div>
-            <div class="message__pending" v-if="message.pending">
-              <Icon>schedule</Icon>
+            <div class="message__row">
+              <div
+                class="message__content"
+                v-if="
+                  !message.encryption ||
+                  chatStore.encryptedMessageCache.find(
+                    (msg) => msg.sub === `${message.room}:${message.id}`,
+                  )
+                ">
+                <span>{{
+                  message.encryption
+                    ? chatStore.encryptedMessageCache.find(
+                        (msg) => msg.sub === `${message.room}:${message.id}`,
+                      )?.data
+                    : message.body.content
+                }}</span>
+              </div>
+              <div class="message__content" v-else>
+                <i class="text-light-700 dark:text-dark-200"
+                  >Failed to decrypt this message.</i
+                >
+              </div>
+              <div class="message__icons">
+                <div class="message__pending" v-if="message.status === 1">
+                  <Icon>schedule</Icon>
+                </div>
+                <div class="message__failed" v-if="message.status === 2">
+                  <Icon>error</Icon>
+                </div>
+                <div class="message__encrypted" v-if="message.encryption">
+                  <Icon>lock</Icon>
+                </div>
+              </div>
             </div>
           </div>
         </div>

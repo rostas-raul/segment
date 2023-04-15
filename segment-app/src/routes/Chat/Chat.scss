@@ -238,16 +238,16 @@
             overflow-wrap: anywhere;
           }
 
-          .message__pending {
-            position: absolute;
-            right: 1rem;
-            bottom: 0.5rem;
-
+          .message__pending, .message__failed, .message__encrypted {
             .icon {
               @apply text-sm;
               @apply text-light-700 dark:text-dark-400;
             }
           }
+        }
+
+        &__row {
+          @apply flex flex-row gap-2 justify-between;
         }
 
         &__header {

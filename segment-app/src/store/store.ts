@@ -10,6 +10,7 @@ import { io, Socket } from 'socket.io-client';
 import { localUserId } from '@/util/Common';
 import * as crypto from 'crypto';
 import { KeyObject } from 'crypto';
+import { decryptMessage, encryptMessage } from '@/util/Message';
 
 /** Store used for settings and persistent things. */
 export const useLocalStore = defineStore('local', () => {
@@ -260,6 +261,7 @@ export const useChatStore = defineStore('chat', () => {
   const localStore = useLocalStore();
 
   const rooms = ref<Room[]>([]);
+  const encryptedMessageCache = ref<{ sub: string; data: string }[]>([]);
   let dhFlag = false;
 
   const currentRoom: (event: string) => unknown = () => null;
@@ -307,7 +309,6 @@ export const useChatStore = defineStore('chat', () => {
       rooms.value = data.data;
     }
 
-    console.log('attempting to ferform dh...');
     if (!dhFlag) performDH(userserver);
 
     return data;
@@ -354,6 +355,30 @@ export const useChatStore = defineStore('chat', () => {
 
     data.data = data.data?.reverse();
 
+    // Decrypt messages and add them to the cache
+    if (data.data) {
+      data.data.forEach((msg) => {
+        if (msg.encryption) {
+          try {
+            const plaintext = decryptMessage(
+              msg.body.content,
+              localStore.sharedSecrets.find((ss) => ss.sub === msg.room)!.key,
+              msg.encryption.iv,
+              msg.encryption.authTag,
+              msg.encryption.salt,
+            );
+
+            encryptedMessageCache.value.push({
+              sub: `${msg.room}:${msg.id}`,
+              data: plaintext,
+            });
+          } catch {
+            /**/
+          }
+        }
+      });
+    }
+
     return data;
   }
 
@@ -363,19 +388,47 @@ export const useChatStore = defineStore('chat', () => {
     message: string,
     ct: (err: AxiosError) => unknown,
   ) {
+    let enc: RoomMessage['encryption'] | null = null;
+
+    // Check if the room is a DM, and a shared secret is established
+    if (
+      roomId.startsWith('dm!') &&
+      localStore.sharedSecrets.find((ss) => ss.sub === roomId)
+    ) {
+      // We can encrypt our message
+      try {
+        const { encryptedMessage, key, iv, authTag, salt } = encryptMessage(
+          message,
+          localStore.sharedSecrets.find((ss) => ss.sub === roomId)!.key,
+        );
+
+        message = encryptedMessage;
+        enc = {
+          iv,
+          salt,
+          authTag,
+        };
+      } catch {
+        return false;
+      }
+    }
+
+    const requestBody: Partial<RoomMessage> = {
+      body: {
+        content: message,
+        signature: ipcRenderer.sendSync(
+          IPCEvents.SignDataRSA,
+          authStore.keypair.private,
+          message,
+        ),
+      },
+      encryption: enc || undefined,
+    };
+
     const res = await axios
       .post<ApiResponse>(
         `${userserver}client/rooms/${roomId}/messages/`,
-        {
-          body: {
-            content: message,
-            signature: ipcRenderer.sendSync(
-              IPCEvents.SignDataRSA,
-              authStore.keypair.private,
-              message,
-            ),
-          },
-        },
+        requestBody,
         {
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`,
@@ -489,8 +542,6 @@ export const useChatStore = defineStore('chat', () => {
         sub: room.id,
         key: sharedSecret,
       });
-
-      console.log('Established shared secret:', sharedSecret);
     }
 
     dhFlag = false;
@@ -504,5 +555,6 @@ export const useChatStore = defineStore('chat', () => {
     sendMessage,
     currentRoom,
     rooms,
+    encryptedMessageCache,
   };
 });

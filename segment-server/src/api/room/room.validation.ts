@@ -99,6 +99,20 @@ export class SendMessageBodyDto {
   signature: string;
 }
 
+export class SendMessageEncryptionDto {
+  @IsString()
+  @IsDefined()
+  iv: string;
+
+  @IsString()
+  @IsDefined()
+  salt: string;
+
+  @IsString()
+  @IsDefined()
+  authTag: string;
+}
+
 export class SendMessageDto {
   @IsDefined()
   @IsNotEmptyObject()
@@ -106,6 +120,12 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => SendMessageBodyDto)
   body!: SendMessageBodyDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SendMessageEncryptionDto)
+  encryption?: SendMessageEncryptionDto;
 }
 
 export class SubmitDHKeyDto {

@@ -36,6 +36,24 @@ export class RoomMessage {
   /** True if the signature matches a publicly available key */
   @Prop() verified?: boolean;
 
+  /** Optional encryption options for encrypted messages */
+  /** Messages are encrypted like so:
+   * IV = RANDOM(16)
+   * SALT = RANDOM(32)
+   * SS = DH(K1, K2)
+   *
+   * EK = KDF(SS)
+   * KEY = KDF(EK + SALT)
+   *
+   * MSG = GCM(KEY, IV)
+   * TAG = GCM_TAG
+   */
+  @Prop({ type: Object }) encryption?: {
+    iv: string;
+    salt: string;
+    authTag: string;
+  };
+
   /** The time and date the message was sent */
   @Prop() timestamp: string;
 }
