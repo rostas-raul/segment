@@ -130,9 +130,9 @@ chatStore.currentRoom = async (event: string) => {
             'message',
             message.sender === authStore.username && 'message--self',
             messages[messages.findIndex((x) => x.id === message.id) + 1]
-              ?.sender === authStore.username && 'message--after',
+              ?.sender === message.sender && 'message--after',
             messages[messages.findIndex((x) => x.id === message.id) - 1]
-              ?.sender === authStore.username && 'message--before',
+              ?.sender === message.sender && 'message--before',
           ]"
           v-for="message in messages"
           :key="message.id">
@@ -148,7 +148,9 @@ chatStore.currentRoom = async (event: string) => {
                     .background[1]
                 } 100%)`,
               }">
-              {{ parseUserId(message.sender).name[0].toUpperCase() }}
+              <span class="avatar__letter">{{
+                parseUserId(message.sender).name[0].toUpperCase()
+              }}</span>
             </div>
           </div>
           <div class="message__bubble">

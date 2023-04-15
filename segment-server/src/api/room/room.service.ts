@@ -50,6 +50,7 @@ export class RoomService {
     @InjectModel(Models.RoomMessage)
     private readonly messageModel: Model<RoomMessage>,
     private readonly httpService: HttpService,
+    private readonly appGateway: AppGateway,
   ) {}
 
   public async getRooms(user: UserToken) {
@@ -82,7 +83,13 @@ export class RoomService {
 
       // Auto-generated
       id: roomOptions.dm === true ? `dm!${randomUUID()}` : randomUUID(),
-      participants: [{ sub: usernameToId(user.username), status: 0 }, ...(roomOptions.participants || [])?.map(x => ({sub: x, status: 1}))],
+      participants: [
+        { sub: usernameToId(user.username), status: 0 },
+        ...(roomOptions.participants || [])?.map((x) => ({
+          sub: x,
+          status: 1,
+        })),
+      ],
       createdAt: moment().toISOString(),
     });
 
@@ -123,7 +130,7 @@ export class RoomService {
       });
     }
 
-    if (room.participants.some(x => x.sub === usernameToId(user.username))) {
+    if (room.participants.some((x) => x.sub === usernameToId(user.username))) {
       return CreateApiResponse({
         status: 'FAIL',
         message: RoomMessages.UserAlreadyJoined,
@@ -147,10 +154,21 @@ export class RoomService {
       });
     }
 
-    if (room.participants.some(x => x.sub === usernameToId(user.username, origin))) {
-      room.participants[room.participants.findIndex(x => x.sub === usernameToId(user.username, origin))].status = 0;
+    if (
+      room.participants.some(
+        (x) => x.sub === usernameToId(user.username, origin),
+      )
+    ) {
+      room.participants[
+        room.participants.findIndex(
+          (x) => x.sub === usernameToId(user.username, origin),
+        )
+      ].status = 0;
     } else {
-      room.participants.push({ sub: usernameToId(user.username, origin), status: 0 });
+      room.participants.push({
+        sub: usernameToId(user.username, origin),
+        status: 0,
+      });
     }
 
     room.markModified('participants');
@@ -447,7 +465,9 @@ export class RoomService {
 
     // check if a member exists with the hostname
     if (
-      !room.participants.some((x) => x.sub.split('@')[1] === syncRoom.data.origin)
+      !room.participants.some(
+        (x) => x.sub.split('@')[1] === syncRoom.data.origin,
+      )
     ) {
       return CreateApiResponse({
         status: 'FAIL',
@@ -515,16 +535,18 @@ export class RoomService {
     );
   }
 
-  public async submitDHKey(submitDHKey: SubmitDHKeyDto, roomId: string, user: UserToken) {
+  public async submitDHKey(
+    submitDHKey: SubmitDHKeyDto,
+    roomId: string,
+    user: UserToken,
+  ) {
     // Check if there is a room where the user is a participant
     const room = await this.roomModel.findOne({
       id: roomId,
       'participants.sub': usernameToId(user.username),
     });
-    
-    if (
-      !room
-    ) {
+
+    if (!room) {
       return CreateApiResponse({
         status: 'FAIL',
         message: CommonMessages.Unauthorized,
@@ -540,26 +562,38 @@ export class RoomService {
     }
 
     // Check if the user has already submitted an ephemeral key
-    if (room._ephemeral.some(x => x.sub === usernameToId(user.username))) {
+    if (room._ephemeral.some((x) => x.sub === usernameToId(user.username))) {
       // Replace it
-      const i = room._ephemeral.findIndex(x => x.sub === usernameToId(user.username))
+      const i = room._ephemeral.findIndex(
+        (x) => x.sub === usernameToId(user.username),
+      );
       room._ephemeral[i].key = submitDHKey.publicKey;
       room._ephemeral[i].rel = false;
       room._ephemeral[i].ts = moment().toISOString();
+    } else {
+      // Create it
+      room._ephemeral.push({
+        sub: usernameToId(user.username),
+        key: submitDHKey.publicKey,
+        rel: false,
+        ts: moment().toISOString(),
+      });
     }
-
-    // Create it
-    room._ephemeral.push({
-      sub: usernameToId(user.username),
-      key: submitDHKey.publicKey,
-      rel: false,
-      ts: moment().toISOString(),
-    });
 
     room.markModified('_ephemeral');
     await room.save();
 
-    // TODO: relay the key to the other participant
+    // TODO: relay it to third-party servers too
+    // relay it to local participants
+    const users = room.participants
+      .filter((user) => user.sub.endsWith(Settings.server.hostname))
+      .map((username) => username.sub.split('@')[0]);
+
+    users.forEach((user) => {
+      this.appGateway.sendToUser(user, 'ws.refresh', {
+        channel: 'rooms',
+      });
+    });
 
     return CreateApiResponse({ status: 'OK' });
   }
@@ -671,6 +705,8 @@ export class MessageService {
     const users = room.participants
       .filter((user) => user.sub.endsWith(Settings.server.hostname))
       .map((username) => username.sub.split('@')[0]);
+
+    console.log(users);
 
     users.forEach((user) => {
       this.appGateway.sendToUser(user, 'ws.refresh', {

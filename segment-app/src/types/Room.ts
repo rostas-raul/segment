@@ -10,13 +10,14 @@ export type TRoomEventType =
 
 export interface Room {
   id: string;
-  participants: string[];
+  participants: { sub: string; status: number }[];
 
   roomName: string;
   roomDescription?: string;
   roomVisibility: 'public' | 'private';
   roomPassword?: string;
   createdAt: string;
+  _ephemeral?: { sub: string; key: string; ts: string; rel: boolean }[];
 }
 
 export interface RoomEvent<T = unknown> {

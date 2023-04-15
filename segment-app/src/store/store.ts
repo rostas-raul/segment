@@ -7,6 +7,9 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 import { ApiResponse } from '@/types/Api';
 import { Room, RoomMessage } from '@/types/Room';
 import { io, Socket } from 'socket.io-client';
+import { localUserId } from '@/util/Common';
+import * as crypto from 'crypto';
+import { KeyObject } from 'crypto';
 
 /** Store used for settings and persistent things. */
 export const useLocalStore = defineStore('local', () => {
@@ -17,18 +20,33 @@ export const useLocalStore = defineStore('local', () => {
       username: null,
     }),
   );
+  const ephemeralKeys = ref(
+    useStorage<
+      {
+        sub: string;
+        privateKey: string;
+        publicKey: string;
+        gen: string;
+        prime: string;
+      }[]
+    >('ephemeralKeys', []),
+  );
+  const sharedSecrets = ref(
+    useStorage<{ sub: string; key: string }[]>('sharedSecrets', []),
+  );
 
   function toggleTheme() {
-    theme.value === 'dark' ? theme.value = 'light' : theme.value = 'dark';
+    theme.value === 'dark' ? (theme.value = 'light') : (theme.value = 'dark');
     document.documentElement.setAttribute('data-theme', theme.value);
   }
 
-  return { theme, lastUserserver, toggleTheme };
+  return { theme, lastUserserver, ephemeralKeys, sharedSecrets, toggleTheme };
 });
 
 /** Authentication related things */
 export const useAuthStore = defineStore('auth', () => {
   const chatStore = useChatStore();
+  const localStore = useLocalStore();
 
   const keypair = ref(
     useStorage<{ public: string | null; private: string | null }>('keypair', {
@@ -142,11 +160,18 @@ export const useAuthStore = defineStore('auth', () => {
     // Refresh the current chat
     s?.on(
       'ws.refresh',
-      (msg: ApiResponse<{ channel: 'room' | 'messages'; id?: string }>) => {
-        if (msg.data?.channel === 'messages') {
-          // Refresh the current chat's messages
-          if (chatStore.currentRoom !== null) {
-            chatStore.currentRoom('refresh.messages');
+      (msg: ApiResponse<{ channel: 'rooms' | 'messages'; id?: string }>) => {
+        switch (msg.data?.channel) {
+          case 'messages': {
+            if (chatStore.currentRoom !== null) {
+              chatStore.currentRoom('refresh.messages');
+            }
+            return;
+          }
+          case 'rooms': {
+            chatStore.fetchRooms(localStore.lastUserserver.host, () =>
+              console.error('Failed to fetch rooms'),
+            );
           }
         }
       },
@@ -187,7 +212,7 @@ export const useAuthStore = defineStore('auth', () => {
     ct: (err: AxiosError) => unknown,
   ) {
     const uploaded = await checkKeys(userserver, ct);
-    
+
     // Failsaife in case keypair doesn't exist
     if (!keypair.value.public || !keypair.value.private) {
       await generateKeyPair();
@@ -232,8 +257,10 @@ export const useAuthStore = defineStore('auth', () => {
 
 export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore();
+  const localStore = useLocalStore();
 
   const rooms = ref<Room[]>([]);
+  let dhFlag = false;
 
   const currentRoom: (event: string) => unknown = () => null;
 
@@ -279,6 +306,9 @@ export const useChatStore = defineStore('chat', () => {
     if (data.data) {
       rooms.value = data.data;
     }
+
+    console.log('attempting to ferform dh...');
+    if (!dhFlag) performDH(userserver);
 
     return data;
   }
@@ -358,6 +388,112 @@ export const useChatStore = defineStore('chat', () => {
       (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     return data;
+  }
+
+  /** Perform DH on dangling rooms */
+  async function performDH(userserver: string) {
+    // Turn on the DH flag.
+    // This fixes a bug where the client will perform more requests than needed.
+    dhFlag = true;
+
+    // Find all DM rooms
+    const r = rooms.value;
+    const dmRooms = r.filter((room) => room.id.startsWith('dm!'));
+
+    // Find rooms where we didn't send an ephemeral key yet
+    const noEpheRooms = dmRooms.filter(
+      (room) =>
+        !(room._ephemeral || []).some(({ sub }) => sub === localUserId()),
+    );
+
+    // TODO: reinitalize shared secret if one side's keys go missing
+
+    for await (const room of noEpheRooms) {
+      // Create an ephemeral and publish it
+      const dh = crypto.getDiffieHellman('modp14');
+      dh.generateKeys();
+
+      // Save all properties so we can reconstruct it later
+      const dhPublicKey = dh.getPublicKey('base64');
+      const dhPrivateKey = dh.getPrivateKey('base64');
+      const dhGen = dh.getGenerator('base64');
+      const dhPrime = dh.getPrime('base64');
+
+      // Store the keys in case the shared secret is lost
+      localStore.ephemeralKeys.push({
+        sub: room.id,
+        privateKey: dhPrivateKey,
+        publicKey: dhPublicKey,
+        gen: dhGen,
+        prime: dhPrime,
+      });
+
+      // Send the DH request to the server
+      await axios
+        .put<ApiResponse>(
+          `${userserver}client/rooms/${room.id}/dh/submit`,
+          {
+            publicKey: dhPublicKey,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.accessToken}`,
+            },
+          },
+        )
+        .catch((err: AxiosError) => console.error('Failed to submit DH key'));
+    }
+
+    // Refresh the rooms
+    await fetchRooms(userserver, () =>
+      console.error('Failed to fetch rooms while performing DH'),
+    );
+
+    // Now find all the rooms where ther other participant submitted the key too
+    const dhRooms = rooms.value.filter(
+      (room) =>
+        room.id.startsWith('dm!') &&
+        room._ephemeral &&
+        room._ephemeral.length === 2,
+    );
+    for await (const room of dhRooms) {
+      // Check if the secret was already calculated
+      if (localStore.sharedSecrets.some((ss) => ss.sub === room.id)) continue;
+
+      // Check if the keys exist locally
+      const ephe = localStore.ephemeralKeys.find((ek) => ek.sub === room.id);
+      if (!ephe) continue;
+
+      // Get the other participant's key
+      const bEpheKey = room._ephemeral!.find(
+        (p) => p.sub !== localUserId(),
+      )?.key;
+
+      // This shouldn't be possible but TypeScript keeps complaining
+      if (!bEpheKey) continue;
+
+      // Reconstruct our key
+      const dh = crypto.createDiffieHellman(
+        ephe.prime,
+        'base64',
+        ephe.gen,
+        'base64',
+      );
+      dh.setPrivateKey(ephe.privateKey, 'base64');
+      dh.generateKeys();
+
+      const sharedSecret = dh.computeSecret(bEpheKey, 'base64', 'base64');
+
+      // Save the shared secret
+      localStore.sharedSecrets.push({
+        sub: room.id,
+        key: sharedSecret,
+      });
+
+      console.log('Established shared secret:', sharedSecret);
+    }
+
+    dhFlag = false;
   }
 
   return {

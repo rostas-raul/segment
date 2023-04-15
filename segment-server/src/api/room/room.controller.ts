@@ -5,7 +5,15 @@ import {
   OutgoingRequest,
 } from '@/schema/dto/Api';
 import { UserToken } from '@/schema/dto/User';
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { MessageService, RoomService } from './room.service';
 import {
@@ -58,7 +66,12 @@ export class ClientRoomController {
   }
 
   @Put(':roomId/dh/submit')
-  public submitDHKey(@Body() submitDHKey: SubmitDHKeyDto, @Param('roomId') roomId: string, @User() user: UserToken) {
+  @UseGuards(JwtAuthGuard)
+  public submitDHKey(
+    @Body() submitDHKey: SubmitDHKeyDto,
+    @Param('roomId') roomId: string,
+    @User() user: UserToken,
+  ) {
     return this.roomService.submitDHKey(submitDHKey, roomId, user);
   }
 

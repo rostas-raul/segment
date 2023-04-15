@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useLocalStore } from '@/store/store';
+import { computed } from 'vue';
 
 interface Props {
   text: boolean;
@@ -8,7 +9,7 @@ interface Props {
 defineProps<Props>();
 
 const localStore = useLocalStore();
-const theme = localStore.theme;
+const theme = computed(() => localStore.theme);
 </script>
 
 <template>

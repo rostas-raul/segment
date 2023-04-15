@@ -196,7 +196,7 @@
       }
 
       &::-webkit-scrollbar-track {
-        @apply bg-light-100 dark:bg-dark-800;
+        @apply bg-light-50 dark:bg-dark-900;
         @apply rounded-full;
       }
 
@@ -273,7 +273,7 @@
           height: 36px;
 
           .avatar {
-            @apply flex justify-center items-center;
+            @apply flex justify-center items-center text-center;
             @apply text-base text-light-50 dark:text-dark-50;
             @apply border-light-50 dark:border-dark-900;
             @apply rounded-full;
@@ -281,6 +281,12 @@
             width: 100%;
             height: 100%;
             border-width: 4px;
+            font-size: 14px;
+
+            .avatar__letter {
+              vertical-align: middle;
+              margin-top: 1px;
+            }
           }
         }
 
@@ -298,11 +304,17 @@
           }
         }
 
-        &--after {
+        &:not(&--self).message--after {
           @apply border-none;
 
           .message__bubble {
-            @apply rounded-br-none;
+            @apply rounded-l-none;
+          }
+        }
+
+        &--self.message--after {
+          .message__bubble {
+            @apply rounded-r-none;
           }
         }
 

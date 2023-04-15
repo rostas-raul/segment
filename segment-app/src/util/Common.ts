@@ -1,3 +1,5 @@
+import { useAuthStore, useLocalStore } from '@/store/store';
+
 export function parseUserId(userId: string): {
   name: string;
   host: string;
@@ -8,6 +10,15 @@ export function parseUserId(userId: string): {
     name: split[0],
     host: split[1],
   };
+}
+
+export function localUserId() {
+  const authStore = useAuthStore();
+  return authStore.username;
+}
+
+export function toUserId(name: string, host: string) {
+  return `${name}@${host}`;
 }
 
 export function profilePictureColors(username: string): {
