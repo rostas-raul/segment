@@ -20,6 +20,7 @@ import ChatRoomCreateVue from './routes/Chat/ChatRoomCreate.vue';
 
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/animations/scale.css';
+import ChatRoomAdd from './routes/Chat/ChatRoomAdd.vue';
 
 // Meta things
 export const DOCUMENT_TITLE = 'segment';
@@ -33,6 +34,7 @@ export enum Routes {
   AuthRegister = '/auth/register',
 
   Chat = '/chat',
+  ChatroomAdd = '/chat/add',
   ChatroomCreate = '/chat/create',
 }
 
@@ -63,8 +65,13 @@ const routes: Array<RouteRecordRaw> = [
         props: true,
       },
       {
-        path: Routes.ChatroomCreate,
+        path: Routes.ChatroomAdd,
+        component: ChatRoomAdd,
+      },
+      {
+        path: `${Routes.ChatroomCreate}/:mode`,
         component: ChatRoomCreateVue,
+        props: true,
       },
     ],
   },
@@ -123,5 +130,8 @@ if (
   localStore.lastUserserver.host &&
   localStore.lastUserserver.username
 ) {
-  await authStore.postLogin(localStore.lastUserserver.host, authStore.accessToken);
+  await authStore.postLogin(
+    localStore.lastUserserver.host,
+    authStore.accessToken,
+  );
 }

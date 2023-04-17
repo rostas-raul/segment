@@ -273,6 +273,8 @@ export const useChatStore = defineStore('chat', () => {
       roomDescription?: string;
       roomVisibility?: 'public' | 'private';
       roomPassword?: string;
+      participants?: string[];
+      dm?: boolean;
     },
     ct: (err: AxiosError) => unknown,
   ): Promise<ApiResponse<Room>> {

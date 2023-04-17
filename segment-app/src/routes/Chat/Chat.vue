@@ -4,7 +4,7 @@ import { useAuthStore, useChatStore, useLocalStore } from '@/store/store';
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import tippy, { Props as TippyProps } from 'tippy.js';
 import Logo from '@/components/Logo/Logo.vue';
-import { parseUserId, profilePictureColors } from '@/util/Common';
+import { localUserId, parseUserId, profilePictureColors } from '@/util/Common';
 import ThemeSwitcher from '@/components/ThemeSwitcher/ThemeSwitcher.vue';
 
 const { t } = useTranslator();
@@ -87,25 +87,48 @@ watch(rooms, () => {
       </div>
     </div>
     <div class="chat__wrapper">
-      <div class="chat__rooms">
-        <div class="rooms_list">
-          <RouterLink
-            class="room"
-            v-for="room in rooms"
-            :key="room.id"
-            :to="`${Routes.Chat}/${room.id}`"
-            :data-tooltip="room.roomName">
-            {{ room.roomName.substring(0, 1) }}
-          </RouterLink>
-        </div>
-        <div class="rooms_separator" v-if="rooms?.length" />
-        <div class="rooms_create">
-          <RouterLink
-            :to="Routes.ChatroomCreate"
-            class="room room_create"
-            data-tooltip="New Chatroom">
-            +
-          </RouterLink>
+      <div class="rooms__wrapper">
+        <div class="chat__rooms">
+          <div class="rooms_list">
+            <RouterLink
+              class="room"
+              :class="[room.id.startsWith('dm!') && 'room--dm']"
+              v-for="room in rooms"
+              :key="room.id"
+              :to="`${Routes.Chat}/${room.id}`"
+              :data-tooltip="room.id.startsWith('dm!') ? `${room.roomName} (DM with ${parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name})` : room.roomName">
+              <span v-if="!room.id.startsWith('dm!')">{{
+                room.roomName.substring(0, 1)
+              }}</span>
+              <div
+                v-else
+                class="avatar"
+                :style="{
+                  background: `linear-gradient(to bottom right, ${
+                    profilePictureColors(parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name)
+                      .background[0]
+                  } 0%, ${
+                    profilePictureColors(parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name)
+                      .background[1]
+                  } 100%)`,
+                }">
+                <span class="avatar__letter">{{
+                  parseUserId(
+                    room.participants.find((x) => x.sub !== localUserId())!.sub,
+                  ).name[0].toUpperCase()
+                }}</span>
+              </div>
+            </RouterLink>
+          </div>
+          <div class="rooms_separator" v-if="rooms?.length > 0" />
+          <div class="rooms_create">
+            <RouterLink
+              :to="Routes.ChatroomAdd"
+              class="room room_create"
+              data-tooltip="New Chatroom">
+              +
+            </RouterLink>
+          </div>
         </div>
       </div>
       <div class="chat__room">
