@@ -8,6 +8,7 @@ import { UserToken } from '@/schema/dto/User';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,

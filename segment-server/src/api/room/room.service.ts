@@ -544,6 +544,7 @@ export class RoomService {
     const room = await this.roomModel.findOne({
       id: roomId,
       'participants.sub': usernameToId(user.username),
+      'participants.status': 0,
     });
 
     if (!room) {
@@ -615,6 +616,7 @@ export class MessageService {
       !(await this.roomModel.exists({
         id: roomId,
         'participants.sub': usernameToId(user.username),
+        'participants.status': 0,
       }))
     ) {
       return CreateApiResponse({
@@ -643,6 +645,7 @@ export class MessageService {
     const room = await this.roomModel.findOne({
       id: roomId,
       'participants.sub': usernameToId(user.username),
+      'participants.status': 0,
     });
 
     // check if the user has permission to post in the room
