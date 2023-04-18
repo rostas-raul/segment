@@ -101,12 +101,6 @@ async function create() {
         :placeholder="t('chat.createChatRoom.inputPlaceholderRoomDescription')"
         v-model:value="roomDescription" />
       <TextInput
-        v-if="params.mode !== 'public' && params.mode !== 'dm'"
-        :label="t('chat.createChatRoom.inputLabelRoomPassword')"
-        :placeholder="t('chat.createChatRoom.inputPlaceholderRoomPassword')"
-        type="password"
-        v-model:value="roomPassword" />
-      <TextInput
         v-if="params.mode === 'dm'"
         label="Recipient"
         placeholder="bob@segment.chat"

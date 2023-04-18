@@ -16,11 +16,22 @@ import ChatRoom from './routes/Chat/ChatRoom.vue';
 import en from './i18n/en';
 import hu from './i18n/hu';
 import { useAuthStore, useLocalStore } from './store/store';
-import ChatRoomCreateVue from './routes/Chat/ChatRoomCreate.vue';
+import ChatRoomCreate from './routes/Chat/ChatRoomCreate.vue';
+import ChatRoomAdd from './routes/Chat/ChatRoomAdd.vue';
+import ChatRoomPublic from './routes/Chat/ChatRoomPublic.vue';
+import ChatRoomSettings from './routes/Chat/ChatRoomSettings.vue';
 
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/animations/scale.css';
-import ChatRoomAdd from './routes/Chat/ChatRoomAdd.vue';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  watchFile,
+  writeFile,
+  writeFileSync,
+} from 'fs';
+import { join } from 'path';
 
 // Meta things
 export const DOCUMENT_TITLE = 'segment';
@@ -36,6 +47,7 @@ export enum Routes {
   Chat = '/chat',
   ChatroomAdd = '/chat/add',
   ChatroomCreate = '/chat/create',
+  ChatroomPublic = '/chat/public',
 }
 
 const routes: Array<RouteRecordRaw> = [
@@ -65,12 +77,21 @@ const routes: Array<RouteRecordRaw> = [
         props: true,
       },
       {
+        path: ':roomId/settings',
+        component: ChatRoomSettings,
+        props: true,
+      },
+      {
         path: Routes.ChatroomAdd,
         component: ChatRoomAdd,
       },
       {
+        path: Routes.ChatroomPublic,
+        component: ChatRoomPublic,
+      },
+      {
         path: `${Routes.ChatroomCreate}/:mode`,
-        component: ChatRoomCreateVue,
+        component: ChatRoomCreate,
         props: true,
       },
     ],
@@ -134,4 +155,52 @@ if (
     localStore.lastUserserver.host,
     authStore.accessToken,
   );
+}
+
+initCSS();
+
+function initCSS() {
+  const cssId = 'custom-css';
+
+  // check if the folder even exists
+  const appdata =
+    process.env.APPDATA ||
+    (process.platform == 'darwin'
+      ? process.env.HOME + '/Library/Preferences'
+      : process.env.HOME + '/.local/share');
+
+  if (!existsSync(join(appdata, 'segment'))) {
+    mkdirSync(join(appdata, 'segment'));
+  }
+
+  if (!existsSync(join(appdata, 'segment', 'theme.css'))) {
+    writeFileSync(join(appdata, 'segment', 'theme.css'), '');
+  }
+
+  loadCSS(appdata, cssId);
+
+  watchFile(join(appdata, 'segment', 'theme.css'), (_curr, _prev) => {
+    console.log('bruh');
+    loadCSS(appdata, cssId);
+  });
+}
+
+function loadCSS(appdata: string, cssId: string) {
+  const content = readFileSync(
+    join(appdata, 'segment', 'theme.css'),
+  ).toString();
+
+  if (!document.getElementById(cssId)) {
+    const el = document.createElement('style');
+    document.head.appendChild(el);
+    el.type = 'text/css';
+    el.id = cssId;
+    el.appendChild(document.createTextNode(content));
+  }
+
+  try {
+    document.querySelector(`#${cssId}`)!.innerHTML = content;
+  } catch {
+    /**/
+  }
 }

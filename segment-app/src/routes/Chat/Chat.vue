@@ -6,11 +6,15 @@ import tippy, { Props as TippyProps } from 'tippy.js';
 import Logo from '@/components/Logo/Logo.vue';
 import { localUserId, parseUserId, profilePictureColors } from '@/util/Common';
 import ThemeSwitcher from '@/components/ThemeSwitcher/ThemeSwitcher.vue';
+import { useRoute, useRouter } from 'vue-router';
+import Icon from '@/components/Icon/Icon.vue';
 
 const { t } = useTranslator();
 const chatStore = useChatStore();
 const localStore = useLocalStore();
 const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
 
 await chatStore.fetchRooms(localStore.lastUserserver.host, (err) => {
   error.value = t('chat.failedToFetchRooms');
@@ -49,7 +53,22 @@ onMounted(() => {
 
 watch(rooms, () => {
   createToolTips('.room[data-tooltip]', tippyProps);
+
+  // Check if there are no rooms
+  if (rooms.value.length === 0) {
+    // Redirect to ChatroomAdd
+    router.push(Routes.ChatroomAdd);
+  }
 });
+
+function scrollToTop() {
+  const el = document.querySelector('.chat__rooms');
+  el?.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: 'auto',
+  });
+}
 </script>
 
 <template>
@@ -91,9 +110,18 @@ watch(rooms, () => {
         <div class="chat__rooms">
           <div class="rooms_list">
             <RouterLink
+              @click="scrollToTop()"
               class="room"
-              :class="[room.id.startsWith('dm!') && 'room--dm']"
-              v-for="room in rooms"
+              :class="[
+                room.id.startsWith('dm!') && 'room--dm',
+                route.path === `/chat/${room.id}/settings` &&
+                  'router-link-active',
+              ]"
+              v-for="room in rooms.sort(
+                (a, b) =>
+                  (localStore.lastViewedRooms[b.id] || Infinity) -
+                  (localStore.lastViewedRooms[a.id] || Infinity),
+              )"
               :key="room.id"
               :to="`${Routes.Chat}/${room.id}`"
               :data-tooltip="room.id.startsWith('dm!') ? `${room.roomName} (DM with ${parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name})` : room.roomName">
@@ -118,6 +146,15 @@ watch(rooms, () => {
                   ).name[0].toUpperCase()
                 }}</span>
               </div>
+
+              <div
+                class="room__indicator indicator--warning"
+                v-if="
+                  room.participants.find((x) => x.sub === localUserId())
+                    ?.status === 1
+                ">
+                <Icon>mail</Icon>
+              </div>
             </RouterLink>
           </div>
           <div class="rooms_separator" v-if="rooms?.length > 0" />
@@ -127,6 +164,14 @@ watch(rooms, () => {
               class="room room_create"
               data-tooltip="New Chatroom">
               +
+            </RouterLink>
+          </div>
+          <div class="rooms_public mt-4">
+            <RouterLink
+              :to="Routes.ChatroomPublic"
+              class="room room_public"
+              data-tooltip="Public Chatrooms">
+              <Icon>explore</Icon>
             </RouterLink>
           </div>
         </div>

@@ -1,5 +1,11 @@
 <script lang="ts" setup>
-export type ButtonType = 'primary' | 'secondary' | 'monochrome';
+export type ButtonType =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'monochrome'
+  | 'outline'
+  | 'transparent';
 
 interface Props {
   type: ButtonType;

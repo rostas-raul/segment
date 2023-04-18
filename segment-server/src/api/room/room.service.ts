@@ -62,6 +62,15 @@ export class RoomService {
     });
   }
 
+  public async getPublicRooms() {
+    return CreateApiResponse({
+      status: 'OK',
+      data: await this.roomModel.find({
+        roomVisibility: 'public',
+      }),
+    });
+  }
+
   public async getRoom(roomId: string, user: UserToken) {
     return CreateApiResponse({
       status: 'OK',
@@ -173,6 +182,16 @@ export class RoomService {
 
     room.markModified('participants');
     await room.save();
+
+    const users = room.participants
+      .filter((user) => user.sub.endsWith(Settings.server.hostname))
+      .map((username) => username.sub.split('@')[0]);
+
+    users.forEach((user) => {
+      this.appGateway.sendToUser(user, 'ws.refresh', {
+        channel: 'rooms',
+      });
+    });
 
     return CreateApiResponse(
       {
@@ -543,8 +562,12 @@ export class RoomService {
     // Check if there is a room where the user is a participant
     const room = await this.roomModel.findOne({
       id: roomId,
-      'participants.sub': usernameToId(user.username),
-      'participants.status': 0,
+      participants: {
+        $elemMatch: {
+          sub: usernameToId(user.username),
+          status: 0,
+        },
+      },
     });
 
     if (!room) {
@@ -598,6 +621,79 @@ export class RoomService {
 
     return CreateApiResponse({ status: 'OK' });
   }
+
+  public async leaveRoom(roomId: string, user: UserToken) {
+    const room = await this.roomModel.findOne({
+      id: roomId,
+      'participants.sub': usernameToId(user.username),
+    });
+
+    // Check if the user is in the room
+    if (!room) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.Unauthorized,
+      });
+    }
+
+    const users = room.participants
+      .filter((user) => user.sub.endsWith(Settings.server.hostname))
+      .map((username) => username.sub.split('@')[0]);
+
+    // Remove from the list of participants
+    room.participants = room.participants.filter(
+      (p) => p.sub !== usernameToId(user.username),
+    );
+
+    room.markModified('participants');
+    await room.save();
+
+    users.forEach((user) => {
+      this.appGateway.sendToUser(user, 'ws.refresh', {
+        channel: 'rooms',
+      });
+    });
+
+    return CreateApiResponse({ status: 'OK' });
+  }
+
+  public async acceptInvitation(roomId: string, user: UserToken) {
+    const room = await this.roomModel.findOne({
+      id: roomId,
+      participants: {
+        $elemMatch: {
+          sub: usernameToId(user.username),
+          status: 1,
+        },
+      },
+    });
+
+    if (!room) {
+      return CreateApiResponse({
+        status: 'FAIL',
+        message: CommonMessages.Unauthorized,
+      });
+    }
+
+    room.participants[
+      room.participants.findIndex((p) => p.sub === usernameToId(user.username))
+    ].status = 0;
+
+    room.markModified('participants');
+    await room.save();
+
+    const users = room.participants
+      .filter((user) => user.sub.endsWith(Settings.server.hostname))
+      .map((username) => username.sub.split('@')[0]);
+
+    users.forEach((user) => {
+      this.appGateway.sendToUser(user, 'ws.refresh', {
+        channel: 'rooms',
+      });
+    });
+
+    return CreateApiResponse({ status: 'OK' });
+  }
 }
 
 @Injectable()
@@ -610,15 +706,19 @@ export class MessageService {
     private readonly appGateway: AppGateway,
   ) {}
 
-  public async getMessages(roomId: string, page: number, user: UserToken) {
+  public async getMessages(roomId: string, user: UserToken) {
+    const room = await this.roomModel.findOne({
+      id: roomId,
+      participants: {
+        $elemMatch: {
+          sub: usernameToId(user.username),
+          status: 0,
+        },
+      },
+    });
+
     // Check if there is a room where the user is a participant
-    if (
-      !(await this.roomModel.exists({
-        id: roomId,
-        'participants.sub': usernameToId(user.username),
-        'participants.status': 0,
-      }))
-    ) {
+    if (!room) {
       return CreateApiResponse({
         status: 'FAIL',
         message: CommonMessages.Unauthorized,
@@ -631,9 +731,7 @@ export class MessageService {
         .find({
           room: roomId,
         })
-        .sort({ timestamp: -1 })
-        .skip((page - 1) * 25)
-        .limit(25),
+        .sort({ timestamp: -1 }),
     });
   }
 
@@ -644,8 +742,12 @@ export class MessageService {
   ) {
     const room = await this.roomModel.findOne({
       id: roomId,
-      'participants.sub': usernameToId(user.username),
-      'participants.status': 0,
+      participants: {
+        $elemMatch: {
+          sub: usernameToId(user.username),
+          status: 0,
+        },
+      },
     });
 
     // check if the user has permission to post in the room

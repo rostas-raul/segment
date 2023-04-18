@@ -7,10 +7,12 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 import { ApiResponse } from '@/types/Api';
 import { Room, RoomMessage } from '@/types/Room';
 import { io, Socket } from 'socket.io-client';
-import { localUserId } from '@/util/Common';
+import { localUserId, parseUserId } from '@/util/Common';
 import * as crypto from 'crypto';
 import { KeyObject } from 'crypto';
 import { decryptMessage, encryptMessage } from '@/util/Message';
+import { useRouter } from 'vue-router';
+import { Routes, router } from '@/main';
 
 /** Store used for settings and persistent things. */
 export const useLocalStore = defineStore('local', () => {
@@ -20,6 +22,9 @@ export const useLocalStore = defineStore('local', () => {
       host: 'https://segment.chat',
       username: null,
     }),
+  );
+  const lastViewedRooms = ref(
+    useStorage<Record<string, number>>('lastViewedRooms', {}),
   );
   const ephemeralKeys = ref(
     useStorage<
@@ -41,7 +46,14 @@ export const useLocalStore = defineStore('local', () => {
     document.documentElement.setAttribute('data-theme', theme.value);
   }
 
-  return { theme, lastUserserver, ephemeralKeys, sharedSecrets, toggleTheme };
+  return {
+    theme,
+    lastUserserver,
+    lastViewedRooms,
+    ephemeralKeys,
+    sharedSecrets,
+    toggleTheme,
+  };
 });
 
 /** Authentication related things */
@@ -55,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
       private: null,
     }),
   );
-  const userserver = ref(useStorage<string>('userserver', null));
+  const host = ref(useStorage<string>('userserver', null));
   const deviceId = ref(useStorage<string>('deviceId', null));
   const accessToken = ref(useStorage<string>('accessToken', null));
   const username = ref(useStorage<string>('username', null));
@@ -134,6 +146,9 @@ export const useAuthStore = defineStore('auth', () => {
     }> = (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     username.value = data.data?.username;
+    host.value = data.data?.username
+      ? parseUserId(data.data?.username).host
+      : null;
 
     socket.value = io(userserver, {
       auth: {
@@ -243,7 +258,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     keypair,
-    userserver,
+    host,
     deviceId,
     accessToken,
     username,
@@ -289,6 +304,83 @@ export const useChatStore = defineStore('chat', () => {
     const data: ApiResponse<Room> =
       (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
+    // Redirect to the room
+    if (data.data && data.data.id) {
+      router.push(`${Routes.Chat}/${data.data.id}`);
+    }
+
+    return data;
+  }
+
+  async function acceptRoomInvitation(
+    userserver: string,
+    roomId: string,
+    ct: (err: AxiosError) => unknown,
+  ): Promise<ApiResponse> {
+    const res = await axios
+      .post<ApiResponse>(
+        `${userserver}client/rooms/${roomId}/acceptInvitation`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${authStore.accessToken}`,
+          },
+        },
+      )
+      .catch((err: AxiosError) => ct(err));
+
+    const data: ApiResponse =
+      (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
+    return data;
+  }
+
+  async function joinRoom(
+    userserver: string,
+    roomId: string,
+    ct: (err: AxiosError) => unknown,
+  ): Promise<ApiResponse<Room>> {
+    const res = await axios
+      .post<ApiResponse<Room>>(
+        `${userserver}client/rooms/join`,
+        {
+          roomId: `${roomId}:${authStore.host}`,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authStore.accessToken}`,
+          },
+        },
+      )
+      .catch((err: AxiosError) => ct(err));
+
+    const data: ApiResponse<Room> =
+      (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
+    // Redirect to the room
+    if (data.data && data.data.id) {
+      router.push(`${Routes.Chat}/${data.data.id}`);
+    }
+
+    return data;
+  }
+
+  async function leaveRoom(
+    userserver: string,
+    roomId: string,
+    ct: (err: AxiosError) => unknown,
+  ): Promise<ApiResponse> {
+    const res = await axios
+      .delete<ApiResponse>(`${userserver}client/rooms/${roomId}/leave`, {
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`,
+        },
+      })
+      .catch((err: AxiosError) => ct(err));
+
+    const data: ApiResponse =
+      (res as AxiosResponse).data || (res as AxiosError).response?.data;
+
     return data;
   }
 
@@ -297,7 +389,7 @@ export const useChatStore = defineStore('chat', () => {
     ct: (err: AxiosError) => unknown,
   ): Promise<ApiResponse<Room[]>> {
     const res = await axios
-      .get<ApiResponse<RoomMessage>>(`${userserver}client/rooms`, {
+      .get<ApiResponse<Room[]>>(`${userserver}client/rooms`, {
         headers: {
           Authorization: `Bearer ${authStore.accessToken}`,
         },
@@ -312,6 +404,24 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     if (!dhFlag) performDH(userserver);
+
+    return data;
+  }
+
+  async function fetchPublicRooms(
+    userserver: string,
+    ct: (err: AxiosError) => unknown,
+  ): Promise<ApiResponse<Room[]>> {
+    const res = await axios
+      .get<ApiResponse<RoomMessage>>(`${userserver}client/rooms/public`, {
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`,
+        },
+      })
+      .catch((err: AxiosError) => ct(err));
+
+    const data: ApiResponse<Room[]> =
+      (res as AxiosResponse).data || (res as AxiosError).response?.data;
 
     return data;
   }
@@ -338,12 +448,11 @@ export const useChatStore = defineStore('chat', () => {
   async function fetchMessages(
     userserver: string,
     roomId: string,
-    page: number,
     ct: (err: AxiosError) => unknown,
   ) {
     const res = await axios
       .get<ApiResponse<RoomMessage[]>>(
-        `${userserver}client/rooms/${roomId}/messages/${page}`,
+        `${userserver}client/rooms/${roomId}/messages`,
         {
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`,
@@ -458,8 +567,16 @@ export const useChatStore = defineStore('chat', () => {
     // Find rooms where we didn't send an ephemeral key yet
     const noEpheRooms = dmRooms.filter(
       (room) =>
-        !(room._ephemeral || []).some(({ sub }) => sub === localUserId()),
+        !(room._ephemeral || []).some(
+          ({ sub }) =>
+            sub === localUserId() &&
+            (room.participants.find((p) => p.sub === localUserId())?.status ===
+              0 ||
+              false),
+        ),
     );
+
+    console.log(noEpheRooms);
 
     // TODO: reinitalize shared secret if one side's keys go missing
 
@@ -475,13 +592,25 @@ export const useChatStore = defineStore('chat', () => {
       const dhPrime = dh.getPrime('base64');
 
       // Store the keys in case the shared secret is lost
-      localStore.ephemeralKeys.push({
-        sub: room.id,
-        privateKey: dhPrivateKey,
-        publicKey: dhPublicKey,
-        gen: dhGen,
-        prime: dhPrime,
-      });
+      if (localStore.ephemeralKeys.find((ek) => ek.sub === room.id)) {
+        localStore.ephemeralKeys[
+          localStore.ephemeralKeys.findIndex((ek) => ek.sub === room.id)
+        ] = {
+          sub: room.id,
+          privateKey: dhPrivateKey,
+          publicKey: dhPublicKey,
+          gen: dhGen,
+          prime: dhPrime,
+        };
+      } else {
+        localStore.ephemeralKeys.push({
+          sub: room.id,
+          privateKey: dhPrivateKey,
+          publicKey: dhPublicKey,
+          gen: dhGen,
+          prime: dhPrime,
+        });
+      }
 
       // Send the DH request to the server
       await axios
@@ -509,8 +638,12 @@ export const useChatStore = defineStore('chat', () => {
       (room) =>
         room.id.startsWith('dm!') &&
         room._ephemeral &&
-        room._ephemeral.length === 2,
+        room._ephemeral.length === 2 &&
+        room.participants.find((p) => p.sub === localUserId())?.status === 0,
     );
+
+    console.log(dhRooms);
+
     for await (const room of dhRooms) {
       // Check if the secret was already calculated
       if (localStore.sharedSecrets.some((ss) => ss.sub === room.id)) continue;
@@ -556,6 +689,10 @@ export const useChatStore = defineStore('chat', () => {
     fetchMessages,
     sendMessage,
     currentRoom,
+    leaveRoom,
+    acceptRoomInvitation,
+    fetchPublicRooms,
+    joinRoom,
     rooms,
     encryptedMessageCache,
   };

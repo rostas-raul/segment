@@ -39,6 +39,48 @@
     }
   }
 
+  .chat__settings {
+    @apply flex flex-col gap-4 p-6;
+
+    max-height: calc(100vh - 32px - 65px - 12px);
+    overflow: auto;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .settings__participants {
+      .participant {
+        @apply flex flex-row items-center gap-3;
+
+        .name {
+          @apply font-semibold;
+        }
+
+        .status {
+          @apply text-sm text-light-800 dark:text-dark-200;
+        }
+      }
+    }
+
+    .avatar {
+      @apply flex justify-center items-center text-center;
+      @apply text-base text-light-50 dark:text-dark-50;
+      @apply border-light-50 dark:border-dark-900;
+      @apply rounded-full;
+
+      width: 40px;
+      height: 40px;
+      border-width: 4px;
+      font-size: 14px;
+
+      .avatar__letter {
+        vertical-align: middle;
+        margin-top: 1px;
+      }
+    }
+  }
+
   .chat__wrapper {
     @apply flex flex-row items-start gap-3 h-full;
 
@@ -55,7 +97,6 @@
     &::after {
       @apply bg-gradient-to-t;
       @apply from-light-50 dark:from-dark-900;
-      @apply to-transparent;
 
       content: '';
       pointer-events: none;
@@ -63,7 +104,7 @@
       left: 0;
       bottom: 0;
       width: 100%;
-      height: 80px;
+      height: 25px;
     }
   }
 
@@ -74,6 +115,7 @@
     @apply bg-light-50 dark:bg-dark-900;
     @apply relative;
 
+    height: 100%;
     max-height: calc(100vh - 32px - 65px - 12px);
     overflow: auto;
 
@@ -82,10 +124,22 @@
     }
 
     .rooms_separator {
-      @apply bg-light-200 dark:bg-dark-800 my-3;
+      @apply flex justify-center items-center;
 
+      position: relative;
       width: 100%;
       height: 1px;
+      padding: 0.75rem 0;
+
+      &::after {
+        @apply bg-light-200 dark:bg-dark-700 my-3;
+
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 1px;
+        left: 0;
+      }
     }
 
     .rooms_list {
@@ -97,19 +151,33 @@
       @apply font-semibold text-xl;
       @apply rounded-md shadow-sm;
       @apply border-2 outline-none border-light-200 dark:border-dark-700;
-      @apply transition;
+      @apply relative;
 
       width: 50px;
       height: 50px;
       cursor: pointer;
       text-decoration: none;
+      transition: 0.2s;
+
+      .avatar {
+        border-radius: 4px;
+        transition: 0.2s;
+      }
 
       &:hover {
         @apply shadow-md rounded-lg;
+
+        .avatar {
+          border-radius: 6px;
+        }
       }
 
       &:active {
         @apply rounded-xl;
+
+        .avatar {
+          @apply rounded-xl;
+        }
       }
 
       /* stylelint-disable-next-line selector-class-pattern */
@@ -119,6 +187,10 @@
         @apply ring-2 ring-offset-2;
         @apply ring-primary-500/75 dark:ring-primary-500/25;
         @apply ring-offset-light-50 dark:ring-offset-dark-900;
+
+        .avatar {
+          border-radius: 10px;
+        }
       }
 
       &:hover:active {
@@ -126,7 +198,7 @@
       }
 
       &--dm {
-        @apply p-0 relative overflow-hidden;
+        @apply p-0 relative;
 
         &:not(.router-link-active) {
           border-color: transparent !important;
@@ -141,6 +213,25 @@
           left: 0;
           width: 100%;
           height: 100%;
+        }
+      }
+
+      .room__indicator {
+        @apply flex justify-center items-center rounded-full;
+        @apply border-2 outline-none border-light-50 dark:border-dark-900;
+
+        position: absolute;
+        right: -8px;
+        bottom: -8px;
+        width: 20px;
+        height: 20px;
+
+        .icon {
+          font-size: 12px;
+        }
+
+        &.indicator--warning {
+          @apply bg-yellow-500 text-black;
         }
       }
     }
@@ -166,11 +257,23 @@
     }
 
     .room__header {
+      @apply flex flex-row justify-between items-center;
       @apply px-8 py-6 box-border;
       @apply shadow-lg rounded-b-none dark:shadow-black/20;
 
       .header__description {
         @apply text-sm text-light-600 dark:text-dark-300;
+      }
+
+      .button__settings {
+        @apply rounded-full;
+
+        width: 32px;
+        height: 32px;
+
+        .icon {
+          font-size: 20px;
+        }
       }
     }
 
@@ -374,6 +477,101 @@
           .message__avatar {
             @apply hidden;
           }
+        }
+      }
+    }
+
+    .room__invitation {
+      @apply flex flex-col justify-center items-center gap-4 p-6;
+
+      height: 100%;
+      max-width: 700px;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .chatroom__public {
+    @apply flex flex-col p-6 self-center relative;
+
+    width: 100%;
+    max-width: 700px;
+    height: 100%;
+    max-height: calc(100vh - 32px - 65px - 12px - 24px);
+
+    &::after {
+      @apply bg-gradient-to-t;
+      @apply from-light-50 dark:from-dark-900;
+
+      content: '';
+      pointer-events: none;
+      position: absolute;
+      left: 0;
+      bottom: 1rem;
+      width: 100%;
+      height: 25px;
+    }
+
+    .rooms__empty,
+    .rooms__error {
+      @apply flex justify-center items-center h-full;
+    }
+
+    .rooms__grid {
+      @apply mt-4 gap-2 pr-2 relative;
+
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      height: 100%;
+      overflow: auto;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-track {
+        @apply bg-light-50 dark:bg-dark-900;
+        @apply rounded-full;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        @apply bg-light-400 dark:bg-dark-600;
+        @apply rounded-full;
+
+        &:hover {
+          @apply bg-light-600 dark:bg-dark-400;
+        }
+      }
+
+      .room__card {
+        @apply flex flex-col p-4;
+        @apply rounded-md shadow-sm;
+        @apply border-2 outline-none border-light-200 dark:border-dark-700;
+
+        text-decoration: none;
+        transition: 0.2s;
+        height: clamp(150px, 200px, 250px);
+
+        .card__header {
+          @apply mb-2;
+        }
+
+        .card__footer {
+          @apply flex flex-col gap-2 mt-auto;
+
+          .info_row {
+            @apply text-light-800 dark:text-dark-300;
+
+            .icon {
+              font-size: 16px;
+            }
+          }
+        }
+
+        p {
+          @apply text-sm;
         }
       }
     }

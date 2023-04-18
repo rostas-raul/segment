@@ -40,20 +40,22 @@ export class ClientRoomController {
     return this.roomService.getRooms(user);
   }
 
+  @Get('/public')
+  @UseGuards(JwtAuthGuard)
+  public getPublicRooms() {
+    return this.roomService.getPublicRooms();
+  }
+
   @Get(':roomId')
   @UseGuards(JwtAuthGuard)
   public getRoom(@Param('roomId') roomId: string, @User() user: UserToken) {
     return this.roomService.getRoom(roomId, user);
   }
 
-  @Get(':roomId/messages/:page')
+  @Get(':roomId/messages')
   @UseGuards(JwtAuthGuard)
-  public getMessages(
-    @Param('roomId') roomId: string,
-    @Param('page') page: number,
-    @User() user: UserToken,
-  ) {
-    return this.messageService.getMessages(roomId, page, user);
+  public getMessages(@Param('roomId') roomId: string, @User() user: UserToken) {
+    return this.messageService.getMessages(roomId, user);
   }
 
   @Post(':roomId/messages')
@@ -92,6 +94,21 @@ export class ClientRoomController {
     @User() user: UserToken,
   ) {
     return this.roomService.joinRoom(joinRoom, user);
+  }
+
+  @Post(':roomId/acceptInvitation')
+  @UseGuards(JwtAuthGuard)
+  public acceptInvitation(
+    @Param('roomId') roomId: string,
+    @User() user: UserToken,
+  ) {
+    return this.roomService.acceptInvitation(roomId, user);
+  }
+
+  @Delete(':roomId/leave')
+  @UseGuards(JwtAuthGuard)
+  public leaveRoom(@Param('roomId') roomId: string, @User() user: UserToken) {
+    return this.roomService.leaveRoom(roomId, user);
   }
 }
 

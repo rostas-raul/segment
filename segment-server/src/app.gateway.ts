@@ -33,7 +33,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   async handleConnection(client: Socket) {
-    const accessToken = client.handshake.auth.token._value || client.handshake.auth.token;
+    const accessToken =
+      client.handshake.auth.token._value || client.handshake.auth.token;
 
     const decoded = this.jwtService.verify(accessToken, {
       secret: config.jwtSecret,

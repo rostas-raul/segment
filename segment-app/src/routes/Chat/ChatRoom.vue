@@ -1,14 +1,18 @@
 <script lang="ts" setup>
 import { useChatStore, useLocalStore, useAuthStore } from '@/store/store';
-import { ref, Ref, watch, onMounted, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, Ref, watch, onMounted, nextTick, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { parseUserId, profilePictureColors } from '@/util/Common';
 import moment from 'moment';
 import TextInput from '@/components/Input/TextInput.vue';
 import Icon from '@/components/Icon/Icon.vue';
 import { RoomMessage } from '@/types/Room';
-import { useTranslator } from '@/main';
+import { Routes, useTranslator } from '@/main';
 import { randomUUID } from 'crypto';
+import Button from '@/components/Button/Button.vue';
+
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 
 interface Params {
   roomId: string;
@@ -23,7 +27,7 @@ const localStore = useLocalStore();
 
 const params: Ref<Params> = ref(route.params as any);
 const page = 1;
-const room = (
+const tempRoom = (
   await chatStore.fetchRoom(
     localStore.lastUserserver.host,
     params.value.roomId,
@@ -35,6 +39,9 @@ const room = (
 
 const messages = ref<Array<RoomMessage & { status?: number }>>([]);
 const message = ref('');
+const router = useRouter();
+
+const room = computed(() => chatStore.rooms.find((r) => r.id === tempRoom.id)!);
 
 async function sendMessage() {
   const id = randomUUID();
@@ -80,12 +87,32 @@ async function fetchMessages() {
     await chatStore.fetchMessages(
       localStore.lastUserserver.host,
       params.value.roomId,
-      page,
       (err) => {
         return err;
       },
     )
   ).data as any;
+}
+
+async function leaveRoom() {
+  await chatStore.leaveRoom(
+    localStore.lastUserserver.host,
+    params.value.roomId,
+    (err) => {
+      return err;
+    },
+  );
+  router.push(Routes.ChatroomAdd);
+}
+
+async function acceptInvite() {
+  await chatStore.acceptRoomInvitation(
+    localStore.lastUserserver.host,
+    params.value.roomId,
+    (err) => {
+      return err;
+    },
+  );
 }
 
 function scroll(behavior: 'smooth' | 'auto' = 'smooth') {
@@ -105,6 +132,9 @@ watch(messages, () => {
 
 onMounted(() => {
   scroll('auto');
+
+  // Set last viewed to current room
+  localStore.lastViewedRooms[room.value.id] = moment().valueOf();
 });
 
 await fetchMessages();
@@ -114,18 +144,32 @@ chatStore.currentRoom = async (event: string) => {
     await fetchMessages();
   }
 };
+
+// Also fetch the messages if the room updates
+watch(room, async () => await fetchMessages());
 </script>
 
 <template>
   <div class="chatroom">
     <div class="room__header">
-      <h2 class="header__title">{{ room.roomName }}</h2>
-      <span v-if="room.roomDescription" class="header__description">
-        {{ room.roomDescription }}
-      </span>
+      <div class="header__left">
+        <h2 class="header__title">{{ room.roomName }}</h2>
+        <span v-if="room.roomDescription" class="header__description">
+          {{ room.roomDescription }}
+        </span>
+      </div>
+      <div class="header__right">
+        <RouterLink
+          class="default_style"
+          :to="`${Routes.Chat}/${room.id}/settings`">
+          <Button class="button__settings" type="transparent">
+            <Icon>more_vert</Icon>
+          </Button>
+        </RouterLink>
+      </div>
     </div>
 
-    <div class="room__content">
+    <div class="room__content" v-if="messages">
       <div class="room__messages">
         <div
           :class="[
@@ -179,13 +223,23 @@ chatStore.currentRoom = async (event: string) => {
                     (msg) => msg.sub === `${message.room}:${message.id}`,
                   )
                 ">
-                <span>{{
-                  message.encryption
-                    ? chatStore.encryptedMessageCache.find(
-                        (msg) => msg.sub === `${message.room}:${message.id}`,
-                      )?.data
-                    : message.body.content
-                }}</span>
+                <span
+                  v-html="
+                    DOMPurify.sanitize(
+                      marked.parseInline(
+                        (message.encryption
+                          ? chatStore.encryptedMessageCache.find(
+                              (msg) =>
+                                msg.sub === `${message.room}:${message.id}`,
+                            )?.data
+                          : message.body.content) || '',
+                      ),
+                      {
+                        ALLOWED_TAGS: ['b', 'strong', 'i', 'em'],
+                      },
+                    ) ||
+                    `<i class='text-light-700 dark:text-dark-200'>Content hidden due to potentionally malicious content.</i>`
+                  " />
               </div>
               <div class="message__content" v-else>
                 <i class="text-light-700 dark:text-dark-200"
@@ -215,7 +269,7 @@ chatStore.currentRoom = async (event: string) => {
       </div>
     </div>
 
-    <div class="room__components">
+    <div class="room__components" v-if="messages">
       <TextInput
         v-model:value="message"
         placeholder="Enter your message..."
@@ -239,6 +293,23 @@ chatStore.currentRoom = async (event: string) => {
         v-if="message.length > 0"
         >{{ message.length }}/1024</span
       >
+    </div>
+
+    <div class="room__invitation" v-if="!messages">
+      <div class="flex flex-col gap-2">
+        <h2 class="text-2xl">Join {{ room.roomName }}?</h2>
+        <p>
+          You have been invited to join the chatroom <i>{{ room.roomName }}</i
+          >, would you like to join it?
+        </p>
+      </div>
+
+      <div class="flex flex-row gap-2 w-full">
+        <Button class="outline--danger" type="outline" @click="leaveRoom()"
+          >Decline</Button
+        >
+        <Button type="primary" @click="acceptInvite()">Accept</Button>
+      </div>
     </div>
   </div>
 </template>
