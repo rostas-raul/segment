@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import Button from '@/components/Button/Button.vue';
 import Icon from '@/components/Icon/Icon.vue';
+import { useTranslator } from '@/main';
 import { useChatStore, useLocalStore } from '@/store/store';
 import { localUserId } from '@/util/Common';
 import { AxiosError } from 'axios';
 import { ref } from 'vue';
 
+const { t } = useTranslator();
 const chatStore = useChatStore();
 const localStore = useLocalStore();
 
@@ -25,8 +27,8 @@ async function joinRoom(roomId: string) {
 
 <template>
   <div class="chatroom__public">
-    <h1 class="header">Public Chatrooms</h1>
-    <p>You can find public rooms that are available on the userserver below.</p>
+    <h1 class="header">{{ t('chat.chatroomPublicTitle') }}</h1>
+    <p>{{ t('chat.chatroomPublicDesc') }}</p>
 
     <div class="rooms__grid" v-if="rooms && rooms.length > 0">
       <div class="room__card" v-for="room in rooms" :key="room.id">
@@ -35,14 +37,18 @@ async function joinRoom(roomId: string) {
         </div>
 
         <p v-if="room.roomDescription">{{ room.roomDescription }}</p>
-        <p v-else><i>No description was specified for this room.</i></p>
+        <p v-else>
+          <i>{{ t('chat.chatroomPublicNoDesc') }}</i>
+        </p>
 
         <div class="card__footer">
           <div class="info_row flex flex-row items-center gap-2">
             <Icon>people</Icon>
             {{ room.participants.length }}
             {{
-              room.participants.length === 1 ? 'participant' : 'participants'
+              room.participants.length === 1
+                ? t('chat.chatroomPublicParticipant')
+                : t('chat.chatroomPublicParticipants')
             }}
           </div>
           <Button
@@ -51,8 +57,8 @@ async function joinRoom(roomId: string) {
             @click="joinRoom(room.id)"
             >{{
               room.participants.some((p) => p.sub === localUserId())
-                ? 'Already Joined'
-                : 'Join'
+                ? t('chat.chatroomPublicAlreadyJoined')
+                : t('chat.chatroomPublicJoin')
             }}</Button
           >
         </div>
@@ -61,16 +67,13 @@ async function joinRoom(roomId: string) {
 
     <div class="rooms__empty" v-else-if="rooms?.length === 0">
       <p>
-        <i>This userserver does not host any public rooms currently.</i>
+        <i>{{ t('chat.chatroomPublicNoRooms') }}</i>
       </p>
     </div>
 
     <div class="rooms__error" v-else-if="!rooms || fetchError">
       <p>
-        <i
-          >An error occured while attempting to fetch rooms. Please try again
-          later.</i
-        >
+        <i>{{ t('chat.chatroomPublicError') }}</i>
       </p>
     </div>
   </div>

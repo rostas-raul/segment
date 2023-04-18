@@ -36,13 +36,84 @@ const en = {
     createChatRoom: {
       header: 'Create a Chatroom',
       inputLabelRoomName: 'Room Name',
-      inputPlaceholderRoomName: 'The room name',
+      inputPlaceholderRoomName: 'My awesome room!',
       inputLabelRoomDescription: 'Room Description',
-      inputPlaceholderRoomDescription: 'A short description',
+      inputPlaceholderRoomDescription: 'Just for me and my friends!',
       inputLabelRoomPassword: 'Room Password',
-      inputPlaceholderRoomPassword: 'The password others join with',
+      inputPlaceholderRoomPassword: 'SuperSecretPassword1234',
       buttonText: 'Create Chatroom',
     },
+
+    dmWith: 'DM with',
+    newChatroom: 'New Chatroom',
+    publicChatrooms: 'Public Chatrooms',
+    xssWarning: 'Message hidden due to potentionally malicious content.',
+    failedDecryption: 'Failed to decrypt this message.',
+    enterMessage: 'Enter your message...',
+    invJoinTitle: 'Join',
+    invJoinDesc1: 'You have been invited to join the chatroom',
+    invJoinDesc2: 'would you like to join it?',
+    invDecline: 'Decline',
+    invAccept: 'Accept',
+
+    addChatroom: 'Add a Chatroom',
+    addChatroomDesc:
+      'In segment, chatrooms are spaces for two or more people to communicate with each other.',
+    addChatroomPublic: 'Public',
+    addChatroomPublicDesc:
+      'Public chatrooms are available to everyone. Anyone can participate. Great for large communities.',
+    addChatroomPrivate: 'Private',
+    addChatroomPrivateDesc:
+      "Private chatrooms are invite only and won't show up anywhere. Great for you and your friends.",
+    addChatroomDM: 'Direct Message',
+    addChatroomDMDesc:
+      'End-to-end encrypted communication between you and a recipient. Great for confidential chats.',
+
+    createChatroomCreateA: 'Create a',
+    createChatroomPublic: 'Public Chatroom',
+    createChatroomPrivate: 'Private Chatroom',
+    createChatroomDM: 'Direct Message',
+    createChatroomDMNote:
+      'For now, direct messages may only be created with users on the same server as you.',
+    createChatroomRecipient: 'Recipient',
+    createChatroomNext: 'Next',
+    createChatroomCreate: 'Create Chatroom',
+    createChatroomIPTitle: 'Invite Participants',
+    createChatroomIPDesc:
+      'You can enter the names of participants you would like to engage in a conversation with below (maximum. 5 people).',
+
+    chatroomPublicTitle: 'Public Chatrooms',
+    chatroomPublicDesc:
+      'You can find public rooms that are available on the userserver below.',
+    chatroomPublicNoDesc: 'No description was specified for this room.',
+    chatroomPublicParticipant: 'participant',
+    chatroomPublicParticipants: 'participants',
+    chatroomPublicAlreadyJoined: 'Already Joined',
+    chatroomPublicJoin: 'Join',
+    chatroomPublicNoRooms:
+      'This userserver does not host any public rooms currently.',
+    chatroomPublicError:
+      'An error occured while attempting to fetch rooms. Please try again later.',
+
+    chatroomSettingsDesc: 'You can find information about the room below.',
+    chatroomSettingsParticipants: 'Participants',
+    chatroomSettingsStatus: 'Status:',
+    chatroomSettingsStatusParticipant: 'Participant',
+    chatroomSettingsStatusInvited: 'Invited',
+    chatroomSettingsStatusUnknown: 'Unknown',
+    chatroomSettingsEncryptionTitle: 'Encryption',
+    chatroomSettingsNoEncryption:
+      'A shared secret could not be established, so encryption is not enabled.',
+    chatroomSettingsEncryption:
+      'A shared secret has been established. Communication is encrypted.',
+    chatroomSettingsCompareDesc:
+      'You can compare the following color combination to your partner over a secure channel (outside of segment) to verify the integrity of messages.',
+    chatroomSettingsDangerZoneTitle: 'Danger Zone',
+    chatroomSettingsDangerZoneDescription:
+      "You can leave this room if you'd like anytime by clicking the button below.",
+    chatroomSettingsDangerZoneWarning:
+      "You won't be able to join back after this.",
+    chatroomSettingsDangerZoneLeave: 'Leave Room',
   },
 
   errors: {

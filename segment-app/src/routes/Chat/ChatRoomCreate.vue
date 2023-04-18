@@ -77,20 +77,17 @@ async function create() {
   <div class="chatroom__create">
     <div class="create__page" v-if="page === 0">
       <h1 class="header">
-        Create a
+        {{ t('chat.createChatroomCreateA') }}
         {{
           params.mode === 'public'
-            ? 'Public Chatroom'
+            ? t('chat.createChatroomPublic')
             : params.mode === 'private'
-            ? 'Private Chatroom'
-            : 'Direct Message'
+            ? t('chat.createChatroomPrivate')
+            : t('chat.createChatroomDM')
         }}
       </h1>
       <p class="mb-4" v-if="params.mode === 'dm'">
-        <i
-          >For now, direct messages may only be created with users on the same
-          server as you.</i
-        >
+        <i>{{ t('chat.createChatroomDMNote') }}</i>
       </p>
       <TextInput
         :label="t('chat.createChatRoom.inputLabelRoomName')"
@@ -102,22 +99,25 @@ async function create() {
         v-model:value="roomDescription" />
       <TextInput
         v-if="params.mode === 'dm'"
-        label="Recipient"
+        :label="t('chat.createChatroomRecipient')"
         placeholder="bob@segment.chat"
         v-model:value="dmParticipant" />
       <Button
         type="primary"
         :disabled="!roomName"
         @click="params.mode === 'private' ? (page = 1) : create()"
-        >{{ params.mode === 'private' ? 'Next' : 'Create Chatroom' }}</Button
+        >{{
+          params.mode === 'private'
+            ? t('chat.createChatroomNext')
+            : t('chat.createChatroomCreate')
+        }}</Button
       >
     </div>
 
     <div class="create__page" v-else-if="page === 1">
-      <h1 class="header">Invite Participants</h1>
+      <h1 class="header">{{ t('chat.createChatroomIPTitle') }}</h1>
       <p class="mb-4">
-        You can enter the names of participants you would like to engage in a
-        conversation with below (maximum. 5 people).
+        {{ t('chat.createChatroomIPDesc') }}
       </p>
 
       <TextInput
@@ -153,7 +153,7 @@ async function create() {
         type="primary"
         :disabled="participants[0]?.length === 0"
         @click="create()"
-        >Create Chatroom</Button
+        >{{ t('chat.createChatroomCreate') }}</Button
       >
     </div>
   </div>

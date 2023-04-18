@@ -9,10 +9,10 @@ const theme = computed(() => localStore.theme);
 </script>
 
 <template>
-    <button class="themeSwitcher" @click="localStore.toggleTheme()">
-        <Icon v-if="theme === 'light'">dark_mode</Icon>
-        <Icon v-else="theme === 'dark'">light_mode</Icon>
-    </button>
+  <button class="themeSwitcher" @click="localStore.toggleTheme()">
+    <Icon v-if="theme === 'light'">dark_mode</Icon>
+    <Icon v-else-if="theme === 'dark'">light_mode</Icon>
+  </button>
 </template>
 
 <style lang="scss" scoped>

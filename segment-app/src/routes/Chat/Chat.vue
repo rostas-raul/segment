@@ -2,12 +2,14 @@
 import { Routes, useTranslator } from '@/main';
 import { useAuthStore, useChatStore, useLocalStore } from '@/store/store';
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import tippy, { Props as TippyProps } from 'tippy.js';
+import tippy, { Instance, Props as TippyProps } from 'tippy.js';
 import Logo from '@/components/Logo/Logo.vue';
 import { localUserId, parseUserId, profilePictureColors } from '@/util/Common';
 import ThemeSwitcher from '@/components/ThemeSwitcher/ThemeSwitcher.vue';
 import { useRoute, useRouter } from 'vue-router';
 import Icon from '@/components/Icon/Icon.vue';
+import LanguageSwitcher from '@/components/LanguageSwitcher/LanguageSwitcher.vue';
+import { useI18n } from 'vue-i18n';
 
 const { t } = useTranslator();
 const chatStore = useChatStore();
@@ -15,6 +17,7 @@ const localStore = useLocalStore();
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const i18n = useI18n();
 
 await chatStore.fetchRooms(localStore.lastUserserver.host, (err) => {
   error.value = t('chat.failedToFetchRooms');
@@ -24,10 +27,11 @@ await chatStore.fetchRooms(localStore.lastUserserver.host, (err) => {
 const error = ref<string | null>(null);
 const rooms = computed(() => chatStore.rooms);
 
-const toolTips: { selector: string; instance: any }[] = [];
+let toolTips: { selector: string; instance: Instance }[] = [];
 function createToolTips(selector: string, props?: Partial<TippyProps>) {
   // destroy all tooltips using the selector
-  toolTips.filter((tooltip) => tooltip.selector !== selector);
+  toolTips.forEach((tt) => tt.instance.destroy());
+  toolTips = toolTips.filter((tooltip) => tooltip.selector !== selector);
 
   const els = document.querySelectorAll(selector);
   els.forEach((el) => {
@@ -61,6 +65,10 @@ watch(rooms, () => {
   }
 });
 
+watch(i18n.locale, () => {
+  createToolTips('.room[data-tooltip]', tippyProps);
+});
+
 function scrollToTop() {
   const el = document.querySelector('.chat__rooms');
   el?.scrollTo({
@@ -79,6 +87,10 @@ function scrollToTop() {
       </div>
 
       <div class="topbar__right">
+        <div class="topbar__languageSwitcher">
+          <LanguageSwitcher />
+        </div>
+
         <div class="topbar__themeSwitcher">
           <ThemeSwitcher />
         </div>
@@ -124,7 +136,7 @@ function scrollToTop() {
               )"
               :key="room.id"
               :to="`${Routes.Chat}/${room.id}`"
-              :data-tooltip="room.id.startsWith('dm!') ? `${room.roomName} (DM with ${parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name})` : room.roomName">
+              :data-tooltip="room.id.startsWith('dm!') ? `${room.roomName} (${t('chat.dmWith')} ${parseUserId(room.participants.find(x => x.sub !== localUserId())!.sub).name})` : room.roomName">
               <span v-if="!room.id.startsWith('dm!')">{{
                 room.roomName.substring(0, 1)
               }}</span>
@@ -162,7 +174,7 @@ function scrollToTop() {
             <RouterLink
               :to="Routes.ChatroomAdd"
               class="room room_create"
-              data-tooltip="New Chatroom">
+              :data-tooltip="t('chat.newChatroom')">
               +
             </RouterLink>
           </div>
@@ -170,7 +182,7 @@ function scrollToTop() {
             <RouterLink
               :to="Routes.ChatroomPublic"
               class="room room_public"
-              data-tooltip="Public Chatrooms">
+              :data-tooltip="t('chat.publicChatrooms')">
               <Icon>explore</Icon>
             </RouterLink>
           </div>

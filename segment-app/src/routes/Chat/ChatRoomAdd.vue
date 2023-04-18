@@ -1,14 +1,15 @@
 <script lang="ts" setup>
 import Icon from '@/components/Icon/Icon.vue';
-import { Routes } from '@/main';
+import { Routes, useTranslator } from '@/main';
+
+const { t } = useTranslator();
 </script>
 
 <template>
   <div class="chatroom__add">
-    <h1 class="header">Add a Chatroom</h1>
+    <h1 class="header">{{ t('chat.addChatroom') }}</h1>
     <p>
-      In segment, chatrooms are spaces for two or more people to communicate
-      with each other.
+      {{ t('chat.addChatroomDesc') }}
     </p>
 
     <div class="flex flex-col gap-2 mt-4">
@@ -16,10 +17,9 @@ import { Routes } from '@/main';
         <div class="add_button">
           <Icon>public</Icon>
           <div class="flex flex-col">
-            <h2>Public</h2>
+            <h2>{{ t('chat.addChatroomPublic') }}</h2>
             <p>
-              Public chatrooms are available to everyone. Anyone can
-              participate. Great for large communities.
+              {{ t('chat.addChatroomPublicDesc') }}
             </p>
           </div>
         </div>
@@ -30,10 +30,9 @@ import { Routes } from '@/main';
         <div class="add_button">
           <Icon>lock</Icon>
           <div class="flex flex-col">
-            <h2>Private</h2>
+            <h2>{{ t('chat.addChatroomPrivate') }}</h2>
             <p>
-              Private chatrooms are invite only and won't show up anywhere.
-              Great for you and your friends.
+              {{ t('chat.addChatroomPrivateDesc') }}
             </p>
           </div>
         </div>
@@ -42,10 +41,9 @@ import { Routes } from '@/main';
         <div class="add_button">
           <Icon>enhanced_encryption</Icon>
           <div class="flex flex-col">
-            <h2>Direct Message</h2>
+            <h2>{{ t('chat.addChatroomDM') }}</h2>
             <p>
-              End-to-end encrypted communication between you and a recipient.
-              Great for confidential chats.
+              {{ t('chat.addChatroomDMDesc') }}
             </p>
           </div>
         </div>

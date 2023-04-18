@@ -6,12 +6,13 @@ import { useRoute, useRouter } from 'vue-router';
 import Button from '@/components/Button/Button.vue';
 import Icon from '@/components/Icon/Icon.vue';
 import { deriveColor } from '@/util/Random';
-import { Routes } from '@/main';
+import { Routes, useTranslator } from '@/main';
 
 interface Params {
   roomId: string;
 }
 
+const { t } = useTranslator();
 const route = useRoute();
 const chatStore = useChatStore();
 const localStore = useLocalStore();
@@ -36,10 +37,10 @@ async function leaveRoom() {
 <template>
   <div class="chat__settings">
     <h1>{{ room.roomName }}</h1>
-    <p>You can find information about the room below.</p>
+    <p>{{ t('chat.chatroomSettingsDesc') }}</p>
 
     <div class="settings__participants flex flex-col gap-2">
-      <h2>Participants</h2>
+      <h2>{{ t('chat.chatroomSettingsParticipants') }}</h2>
       <div class="flex flex-col gap-2">
         <div class="participant" v-for="p in room.participants" :key="p.sub">
           <div
@@ -58,13 +59,13 @@ async function leaveRoom() {
           <div class="flex flex-col">
             <div class="name">{{ parseUserId(p.sub).name }}</div>
             <div class="status">
-              Status:
+              {{ t('chat.chatroomSettingsStatus') }}
               <i>{{
                 p.status === 0
-                  ? 'Participant'
+                  ? t('chat.chatroomSettingsStatusParticipant')
                   : p.status === 1
-                  ? 'Invited'
-                  : 'Unknown'
+                  ? t('chat.chatroomSettingsStatusInvited')
+                  : t('chat.chatroomSettingsStatusUnknown')
               }}</i>
             </div>
           </div>
@@ -73,25 +74,23 @@ async function leaveRoom() {
     </div>
 
     <div class="flex flex-col gap-2" v-if="room.id.startsWith('dm!')">
-      <h2>Encryption</h2>
+      <h2>{{ t('chat.chatroomSettingsEncryptionTitle') }}</h2>
 
       <div
         class="flex flex-row items-center gap-2 text-yellow-500 text-sm"
         v-if="!localStore.sharedSecrets.find((ss) => ss.sub === room.id)">
         <Icon class="text-base">warning</Icon>
-        A shared secret could not be established, so encryption is not enabled.
+        {{ t('chat.chatroomSettingsNoEncryption') }}
       </div>
       <div class="key_verification" v-else>
         <div
           class="flex flex-row items-center gap-2 text-secondary-600 text-sm mb-4">
           <Icon class="text-base">check_circle</Icon>
-          A shared secret is established. Communication is encrypted.
+          {{ t('chat.chatroomSettingsEncryption') }}
         </div>
 
         <p>
-          You can compare the following color combination to your partner over a
-          secure channel (outside of segment) to verify the integrity of
-          messages.
+          {{ t('chat.chatroomSettingsCompareDesc') }}
         </p>
 
         <div class="flex flex-row gap-4 mt-2">
@@ -123,17 +122,16 @@ async function leaveRoom() {
     </div>
 
     <div class="flex flex-col gap-2">
-      <h2>Danger Zone</h2>
+      <h2>{{ t('chat.chatroomSettingsDangerZoneTitle') }}</h2>
       <p>
-        You can leave this room if you'd like anytime by clicking the button
-        below.
+        {{ t('chat.chatroomSettingsDangerZoneDescription') }}
 
         <br />
 
         <span
           class="text-red-500 dark:text-red-400"
           v-if="room.roomVisibility === 'private'">
-          You won't be able to join back after this.
+          {{ t('chat.chatroomSettingsDangerZoneWarning') }}
         </span>
       </p>
 
@@ -144,7 +142,7 @@ async function leaveRoom() {
           fontSize: '14px',
         }"
         @click="leaveRoom()"
-        >Leave Room</Button
+        >{{ t('chat.chatroomSettingsDangerZoneLeave') }}</Button
       >
     </div>
   </div>

@@ -238,13 +238,15 @@ watch(room, async () => await fetchMessages());
                         ALLOWED_TAGS: ['b', 'strong', 'i', 'em'],
                       },
                     ) ||
-                    `<i class='text-light-700 dark:text-dark-200'>Content hidden due to potentionally malicious content.</i>`
+                    `<i class='text-light-700 dark:text-dark-200'>${t(
+                      'chat.xssWarning',
+                    )}</i>`
                   " />
               </div>
               <div class="message__content" v-else>
-                <i class="text-light-700 dark:text-dark-200"
-                  >Failed to decrypt this message.</i
-                >
+                <i class="text-light-700 dark:text-dark-200">{{
+                  t('chat.failedDecryption')
+                }}</i>
               </div>
               <div class="message__icons">
                 <div class="message__pending" v-if="message.status === 1">
@@ -272,7 +274,7 @@ watch(room, async () => await fetchMessages());
     <div class="room__components" v-if="messages">
       <TextInput
         v-model:value="message"
-        placeholder="Enter your message..."
+        :placeholder="t('chat.enterMessage')"
         :clear-on-enter="true"
         @pressend-enter="sendMessage()"
         :maxLength="1024" />
@@ -297,18 +299,22 @@ watch(room, async () => await fetchMessages());
 
     <div class="room__invitation" v-if="!messages">
       <div class="flex flex-col gap-2">
-        <h2 class="text-2xl">Join {{ room.roomName }}?</h2>
+        <h2 class="text-2xl">
+          {{ t('chat.invJoinTitle') }} {{ room.roomName }}?
+        </h2>
         <p>
-          You have been invited to join the chatroom <i>{{ room.roomName }}</i
-          >, would you like to join it?
+          {{ t('chat.invJoinDesc1') }} <i>{{ room.roomName }}</i
+          >, {{ t('chat.invJoinDesc2') }}
         </p>
       </div>
 
       <div class="flex flex-row gap-2 w-full">
-        <Button class="outline--danger" type="outline" @click="leaveRoom()"
-          >Decline</Button
-        >
-        <Button type="primary" @click="acceptInvite()">Accept</Button>
+        <Button class="outline--danger" type="outline" @click="leaveRoom()">{{
+          t('chat.invDecline')
+        }}</Button>
+        <Button type="primary" @click="acceptInvite()">{{
+          t('chat.invAccept')
+        }}</Button>
       </div>
     </div>
   </div>
